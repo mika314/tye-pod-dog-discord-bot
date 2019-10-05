@@ -1,12 +1,13 @@
-#include <fstream>
-#include <iostream>
-
+#include "guild.hpp"
+#include <algorithm>
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
-
 #include <discordpp/bot.hh>
 #include <discordpp/rest-beast.hh>
 #include <discordpp/websocket-beast.hh>
+#include <fstream>
+#include <iostream>
+#include <locale>
 
 namespace asio = boost::asio;
 using json = nlohmann::json;
@@ -14,6 +15,18 @@ namespace dpp = discordpp;
 using DppBot = dpp::WebsocketBeast<dpp::RestBeast<dpp::Bot>>;
 
 std::string readTokenFile(const std::string &tokenFilePath);
+
+namespace
+{
+  bool replace(std::string &str, const std::string &from, const std::string &to)
+  {
+    size_t start_pos = str.find(from);
+    if (start_pos == std::string::npos)
+      return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+  }
+} // namespace
 
 int main()
 {
@@ -39,6 +52,8 @@ int main()
   // Create Bot object
   DppBot bot;
 
+  std::unordered_map<std::string, Guild> guilds;
+
   /*/
    * Create handler for the READY payload, this may be handled by the bot in the future.
    * The `self` object contains all information about the 'bot' user.
@@ -49,44 +64,8 @@ int main()
   // Create handler for the MESSAGE_CREATE payload, this recieves all messages sent that the bot can
   // see.
   bot.handlers.insert(
-    {"MESSAGE_CREATE", [&bot, &self](json msg) {
-       std::cout << "MESSAGE_CREATE: " << msg.dump() << std::endl;
-       // Scan through mentions in the message for self
-       bool mentioned = false;
-       for (const json &mention : msg["mentions"])
-       {
-         mentioned = mentioned || mention["id"] == self["id"];
-       }
-       if (mentioned)
-       {
-         // Identify and remove mentions of self from the message
-         std::string mentioncode = "<@" + self["id"].get<std::string>() + ">";
-         std::string content = msg["content"];
-         while (content.find(mentioncode + ' ') != std::string::npos)
-         {
-           content = content.substr(0, content.find(mentioncode + ' ')) +
-                     content.substr(content.find(mentioncode + ' ') + (mentioncode + ' ').size());
-         }
-         while (content.find(mentioncode) != std::string::npos)
-         {
-           content = content.substr(0, content.find(mentioncode)) +
-                     content.substr(content.find(mentioncode) + mentioncode.size());
-         }
-
-         // Echo the created message
-         bot.call("POST",
-                  "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-                  {{"content", content}});
-
-         // Set status to Playing "with [author]"
-         bot.send(
-           3,
-           {{"game",
-             {{"name", "with " + msg["author"]["username"].get<std::string>()}, {"type", 0}}},
-            {"status", "online"},
-            {"afk", false},
-            {"since", "null"}});
-       }
+    {"MESSAGE_CREATE", [&bot, &self, &guilds](json msg) {
+       // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
        if (rand() % 10 == 0)
        {
          const char *words[] = {
@@ -112,33 +91,72 @@ int main()
                   "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
                   {{"content", words[rand() % sizeof(words) / sizeof(*words)]}});
        }
+
        if (msg["type"] == 7)
        {
-         std::ostringstream content;
-         content << "welcome <@" << msg["author"]["id"].get<std::string>()
-                 << "> go read dem <#629573374003380226> and go have fun ";
+         const char *welcomeMessages[] = {
+           "welcome <@user> go read dem <#rules> and go have fun",
+           "whalecum <@user>  dont forget to read the <#rules>",
+           "welcome <@user> wHy not go rEad the <#rules> and join our chaos Pwp",
+           "Welcome <@user>  please read the <#rules> and enjoy our lord and savior tide pod dog",
+           "welsome <@user> dont forget to read the <#rules>!",
+           "whalecum <@user> dont forget to read the <#rules>",
+           "<@user> welcome to the tyde pod dog legion <#rules>",
+           "<43 whalecume <@user> dont forget to read the <#rules>",
+         };
+         std::string guildId = msg["guild_id"].get<std::string>();
+         const auto &guild = guilds[guildId];
+         std::string message =
+           welcomeMessages[rand() % sizeof(welcomeMessages) / sizeof(*welcomeMessages)];
+         replace(message, "user", msg["author"]["id"].get<std::string>());
+         replace(message, "rules", guild.rulesChannelId);
          bot.call("POST",
                   "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-                  {{"content", content.str()}});
+                  {{"content", message}});
+       }
+
+       auto content = msg["content"].get<std::string>();
+       std::transform(std::begin(content), std::end(content), std::begin(content), ::tolower);
+       if (content.find("housekeeping") != std::string::npos)
+       {
+         bot.call("POST",
+                  "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
+                  {{"content", "FBI!"}});
        }
      }});
-  bot.handlers.insert(
-    {"GUILD_MEMBER_REMOVE", [&bot, &self](json msg) {
-       std::cout << "GUILD_MEMBER_REMOVE: " << msg.dump() << std::endl;
+  bot.handlers.insert({"GUILD_MEMBER_REMOVE", [&bot, &self, &guilds](json msg) {
+                         // std::cout << "GUILD_MEMBER_REMOVE: " << msg.dump(4) << std::endl;
 
-       std::ostringstream content;
-       content << "goodbye <@" << msg["user"]["id"].get<std::string>() << ">";
-       bot.call("POST", "/channels/546971058893488148/messages", {{"content", content.str()}});
-     }});
-  bot.handlers.insert({"GUILD_MEMBER_ADD", [&bot, &self](json msg) {
-                         std::cout << "GUILD_MEMBER_ADD: " << msg.dump() << std::endl;
-                         // CHANNEL_ID
-                         // USER_ID
+                         std::ostringstream content;
+                         std::string guildId = msg["guild_id"].get<std::string>();
+                         const auto &guild = guilds[guildId];
+                         content << "goodbye <@" << msg["user"]["id"].get<std::string>() << ">";
+                         bot.call("POST",
+                                  "/channels/" + guild.systemChannelId + "/messages",
+                                  {{"content", content.str()}});
+                       }});
+  bot.handlers.insert({"GUILD_MEMBER_ADD", [&bot, &self, &guilds](json msg) {
+                         // std::cout << "GUILD_MEMBER_ADD: " << msg.dump(4) << std::endl;
                        }});
 
   // These handlers silence the GUILD_CREATE, PRESENCE_UPDATE, and TYPING_START payloads, as
   // they're some that you see a lot.
-  bot.handlers.insert({"GUILD_CREATE", [](json) {}});    // Ignoring
+  bot.handlers.insert({"GUILD_CREATE", [&guilds](json msg) {
+                         // std::cout << "GUILD_CREATE: " << msg.dump(4) << std::endl;
+                         auto &guild = guilds[msg["id"].get<std::string>()];
+                         guild.systemChannelId = msg["system_channel_id"].get<std::string>();
+                         for (const auto &ch : msg["channels"])
+                         {
+                           auto name = ch["name"].get<std::string>();
+                           std::transform(
+                             std::begin(name), std::end(name), std::begin(name), ::tolower);
+                           if (name.find("rules") != std::string::npos)
+                           {
+                             guild.rulesChannelId = ch["id"].get<std::string>();
+                             break;
+                           }
+                         }
+                       }});
   bot.handlers.insert({"PRESENCE_UPDATE", [](json) {}}); // Ignoring
   bot.handlers.insert({"TYPING_START", [](json) {}});    // Ignoring
 
