@@ -66,6 +66,46 @@ int main()
   bot.handlers.insert(
     {"MESSAGE_CREATE", [&bot, &self, &guilds](json msg) {
        // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
+       {
+         // Scan through mentions in the message for self
+         bool mentioned = false;
+         for (const json &mention : msg["mentions"])
+         {
+           mentioned = mentioned || mention["id"] == self["id"];
+         }
+         auto content = msg["content"].get<std::string>();
+         if (mentioned && content.find("?") != std::string::npos)
+         {
+           const char *eightBallAnswers[] = {
+             "It is certain.",
+             "It is decidedly so.",
+             "Without a doubt.",
+             "Yes - definitely.",
+             "You may rely on it.",
+             "As I see it, yes.",
+             "Most likely.",
+             "Outlook good.",
+             "Yes.",
+             "Signs point to yes.",
+             "Reply hazy, try again.",
+             "Ask again later.",
+             "Better not tell you now.",
+             "Cannot predict now.",
+             "Concentrate and ask again.",
+             "Don't count on it.",
+             "My reply is no.",
+             "My sources say no.",
+             "Outlook not so good.",
+             "Very doubtful.",
+           };
+           bot.call(
+             "POST",
+             "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
+             {{"content",
+               eightBallAnswers[rand() % sizeof(eightBallAnswers) / sizeof(*eightBallAnswers)]}});
+         }
+       }
+
        if (rand() % 10 == 0)
        {
          const char *words[] = {
