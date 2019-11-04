@@ -160,7 +160,7 @@ int main()
                          std::ostringstream content;
                          std::string guildId = msg["guild_id"].get<std::string>();
                          const auto &guild = guilds[guildId];
-                         content << "goodbye <@" << msg["user"]["id"].get<std::string>() << ">";
+                         content << "goodbye " << msg["user"]["username"].get<std::string>() << "...";
                          bot.call("POST",
                                   "/channels/" + guild.systemChannelId + "/messages",
                                   {{"content", content.str()}});
