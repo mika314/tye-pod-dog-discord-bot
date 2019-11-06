@@ -1,6 +1,5 @@
 #include "bot.hpp"
 
-#include "guild.hpp"
 #include "read_token.hpp"
 #include <algorithm>
 #include <boost/asio.hpp>
@@ -14,15 +13,21 @@
 
 namespace
 {
-  bool replace(std::string &str, const std::string &from, const std::string &to)
+  std::string toString(Handler handler)
   {
-    size_t start_pos = str.find(from);
-    if (start_pos == std::string::npos)
-      return false;
-    str.replace(start_pos, from.length(), to);
-    return true;
+    switch (handler)
+    {
+    case Handler::MessageCreate: return "MESSAGE_CREATE";
+    case Handler::GuildMemberRemove: return "GUILD_MEMBER_REMOVE";
+    case Handler::GuildMemberAdd: return "GUILD_MEMBER_ADD";
+    case Handler::GuildCreate: return "GUILD_CREATE";
+    case Handler::PresenceUpdate: return "PRESENCE_UPDATE";
+    case Handler::TypingStart: return "TYPING_START";
+    };
   }
 } // namespace
+
+
 
 namespace Internal
 {
@@ -34,16 +39,27 @@ namespace Internal
   class Bot
   {
   public:
-    Bot();
+    Bot(::Bot &external);
     void run();
+    void message(const std::string &channelId, const std::string &message);
+    void reg(Handler, std::function<void(::Bot &, const nlohmann::json &)>);
+    InvokeToken invokeAt(std::chrono::system_clock::time_point, std::function<void(::Bot &)>);
+    InvokeToken invokeFromNow(std::chrono::milliseconds, std::function<void(::Bot &)>);
+    json self;
 
   private:
+    ::Bot &external;
     DppBot bot;
-    std::unordered_map<std::string, Guild> guilds;
-    json self;
+    std::shared_ptr<asio::io_context> aioc;
   };
 
-  Bot::Bot()
+  struct Timer
+  {
+    Timer(boost::asio::system_timer &&timer) : timer(std::move(timer)) {}
+    boost::asio::system_timer timer;
+  };
+
+  Bot::Bot(::Bot &external) : external(external), aioc(std::make_shared<asio::io_context>())
   {
     /*/
      * Create handler for the READY payload, this may be handled by the bot in the future.
@@ -51,157 +67,64 @@ namespace Internal
     /*/
     bot.handlers.insert({"READY", [this](json data) { self = data["user"]; }});
 
-    // Create handler for the MESSAGE_CREATE payload, this recieves all messages sent that the bot
-    // can see.
-    bot.handlers.insert(
-      {"MESSAGE_CREATE", [this](json msg) {
-         // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
-         {
-           // Scan through mentions in the message for self
-           bool mentioned = false;
-           for (const json &mention : msg["mentions"])
-           {
-             mentioned = mentioned || mention["id"] == self["id"];
-           }
-           auto content = msg["content"].get<std::string>();
-           if (mentioned && content.find("?") != std::string::npos)
-           {
-             const char *eightBallAnswers[] = {
-               "It is certain.",
-               "It is decidedly so.",
-               "Without a doubt.",
-               "Yes - definitely.",
-               "You may rely on it.",
-               "As I see it, yes.",
-               "Most likely.",
-               "Outlook good.",
-               "Yes.",
-               "Signs point to yes.",
-               "Reply hazy, try again.",
-               "Ask again later.",
-               "Better not tell you now.",
-               "Cannot predict now.",
-               "Concentrate and ask again.",
-               "Don't count on it.",
-               "My reply is no.",
-               "My sources say no.",
-               "Outlook not so good.",
-               "Very doubtful.",
-             };
-             bot.call(
-               "POST",
-               "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-               {{"content",
-                 eightBallAnswers[rand() % sizeof(eightBallAnswers) / sizeof(*eightBallAnswers)]}});
-           }
-         }
-
-         if (rand() % 10 == 0)
-         {
-           const char *words[] = {
-             "yeet",
-             "420",
-             "YAS",
-             "YIS",
-             "Lololol",
-             "LMAO",
-             "AWWWW",
-             "REEEEEEE",
-             "YAAAAAAS",
-             "LOLOL",
-             "YE",
-             "HNNNNNNNG",
-             "HNNNNNNNNNNG",
-             "HNNNNNNNNNNNNNNNG",
-             "BOI",
-             "BOIOOO",
-             "Dab",
-           };
-           bot.call("POST",
-                    "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-                    {{"content", words[rand() % sizeof(words) / sizeof(*words)]}});
-         }
-
-         if (msg["type"] == 7)
-         {
-           const char *welcomeMessages[] = {
-             "welcome <@user> go read dem <#rules> and go have fun",
-             "whalecum <@user>  dont forget to read the <#rules>",
-             "welcome <@user> wHy not go rEad the <#rules> and join our chaos Pwp",
-             "Welcome <@user>  please read the <#rules> and enjoy our lord and savior tide pod dog",
-             "welsome <@user> dont forget to read the <#rules>!",
-             "whalecum <@user> dont forget to read the <#rules>",
-             "<@user> welcome to the tyde pod dog legion <#rules>",
-             "<43 whalecume <@user> dont forget to read the <#rules>",
-           };
-           std::string guildId = msg["guild_id"].get<std::string>();
-           const auto &guild = guilds[guildId];
-           std::string message =
-             welcomeMessages[rand() % sizeof(welcomeMessages) / sizeof(*welcomeMessages)];
-           replace(message, "user", msg["author"]["id"].get<std::string>());
-           replace(message, "rules", guild.rulesChannelId);
-           bot.call("POST",
-                    "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-                    {{"content", message}});
-         }
-
-         auto content = msg["content"].get<std::string>();
-         std::transform(std::begin(content), std::end(content), std::begin(content), ::tolower);
-         if (content.find("housekeeping") != std::string::npos)
-         {
-           bot.call("POST",
-                    "/channels/" + msg["channel_id"].get<std::string>() + "/messages",
-                    {{"content", "FBI!"}});
-         }
-       }});
-    bot.handlers.insert({"GUILD_MEMBER_REMOVE", [this](json msg) {
-                           // std::cout << "GUILD_MEMBER_REMOVE: " << msg.dump(4) << std::endl;
-
-                           std::ostringstream content;
-                           std::string guildId = msg["guild_id"].get<std::string>();
-                           const auto &guild = guilds[guildId];
-                           content << "goodbye " << msg["user"]["username"].get<std::string>()
-                                   << "...";
-                           bot.call("POST",
-                                    "/channels/" + guild.systemChannelId + "/messages",
-                                    {{"content", content.str()}});
-                         }});
-    bot.handlers.insert({"GUILD_MEMBER_ADD", [this](json msg) {
-                           // std::cout << "GUILD_MEMBER_ADD: " << msg.dump(4) << std::endl;
-                         }});
-
-    // These handlers silence the GUILD_CREATE, PRESENCE_UPDATE, and TYPING_START payloads, as
-    // they're some that you see a lot.
-    bot.handlers.insert({"GUILD_CREATE", [this](json msg) {
-                           // std::cout << "GUILD_CREATE: " << msg.dump(4) << std::endl;
-                           auto &guild = guilds[msg["id"].get<std::string>()];
-                           guild.systemChannelId = msg["system_channel_id"].get<std::string>();
-                           for (const auto &ch : msg["channels"])
-                           {
-                             auto name = ch["name"].get<std::string>();
-                             std::transform(
-                               std::begin(name), std::end(name), std::begin(name), ::tolower);
-                             if (name.find("rules") != std::string::npos)
-                             {
-                               guild.rulesChannelId = ch["id"].get<std::string>();
-                               break;
-                             }
-                           }
-                         }});
-    bot.handlers.insert({"PRESENCE_UPDATE", [](json) {}}); // Ignoring
-    bot.handlers.insert({"TYPING_START", [](json) {}});    // Ignoring
-
-    // Create Asio context, this handles async stuff.
-    auto aioc = std::make_shared<asio::io_context>();
-
     // Set the bot up
     bot.initBot(6, readTokenFile("token.dat"), aioc);
   }
 
   void Bot::run() { bot.run(); }
+  void Bot::message(const std::string &channelId, const std::string &message)
+  {
+    bot.call("POST", "/channels/" + channelId + "/messages", {{"content", message}});
+  }
+
+  void Bot::reg(Handler h, std::function<void(::Bot &, const nlohmann::json &)> cb)
+  {
+    bot.handlers.insert({toString(h), [this, cb{std::move(cb)}](json msg) { cb(external, msg); }});
+  }
+
+  InvokeToken Bot::invokeAt(std::chrono::system_clock::time_point timePoint,
+                              std::function<void(::Bot &)> invoke)
+  {
+    auto timer{boost::asio::system_timer(*aioc)};
+    timer.expires_at(timePoint);
+    timer.async_wait([this, invoke{std::move(invoke)}](boost::system::error_code err) {
+      if (err == boost::asio::error::operation_aborted)
+      {
+        std::cerr << "timer is canceled\n";
+        return;
+      }
+      if (err != boost::system::errc::success)
+      {
+        std::cerr << "error code: " << err << std::endl;
+        return;
+      }
+      invoke(external);
+    });
+    return InvokeToken{Timer{std::move(timer)}};
+  }
+  InvokeToken Bot::invokeFromNow(std::chrono::milliseconds duration,
+                                   std::function<void(::Bot &)> invoke)
+  {
+    auto timer{boost::asio::system_timer(*aioc)};
+    timer.expires_from_now(duration);
+    timer.async_wait([this, invoke](boost::system::error_code err) {
+      if (err == boost::asio::error::operation_aborted)
+      {
+        std::cerr << "timer is canceled\n";
+        return;
+      }
+      if (err != boost::system::errc::success)
+      {
+        std::cerr << "error code: " << err << std::endl;
+        return;
+      }
+      invoke(external);
+    });
+    return InvokeToken{Timer{std::move(timer)}};
+  }
 } // namespace Internal
 
-Bot::Bot() : bot(std::make_unique<Internal::Bot>()) {}
+Bot::Bot() : bot(std::make_unique<Internal::Bot>(*this)) {}
 
 void Bot::run()
 {
@@ -209,3 +132,44 @@ void Bot::run()
 }
 
 Bot::~Bot() {}
+
+void Bot::reg(Handler h, std::function<void(Bot &, const nlohmann::json &)> cb)
+{
+  bot->reg(h, std::move(cb));
+}
+
+const nlohmann::json &Bot::self() const
+{
+  return bot->self;
+}
+
+void Bot::message(const std::string &channelId, const std::string &message)
+{
+  bot->message(channelId, message);
+}
+
+InvokeToken Bot::invokeAt(std::chrono::system_clock::time_point timePoint,
+                            std::function<void(Bot &)> invoke)
+{
+  return bot->invokeAt(timePoint, std::move(invoke));
+}
+
+InvokeToken Bot::invokeFromNow(std::chrono::milliseconds duration,
+                                 std::function<void(Bot &)> invoke)
+{
+  return bot->invokeFromNow(duration, std::move(invoke));
+}
+
+InvokeToken::InvokeToken() = default;
+
+InvokeToken::~InvokeToken() = default;
+
+InvokeToken::InvokeToken(InvokeToken &&) = default;
+
+InvokeToken &InvokeToken::operator=(InvokeToken &&) = default;
+
+InvokeToken::InvokeToken(Internal::Timer &&timer)
+  : timer(std::make_unique<Internal::Timer>(std::move(timer)))
+{
+}
+
