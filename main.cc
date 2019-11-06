@@ -111,8 +111,10 @@ int main()
       auto content = msg["content"].get<std::string>();
       std::transform(std::begin(content), std::end(content), std::begin(content), ::tolower);
       if (content.find("housekeeping") != std::string::npos)
+      {
         bot.message(guild.lastChannelId, "FBI!");
-      return;
+        return;
+      }
     }
     if (rand() % 10 == 0)
     {
