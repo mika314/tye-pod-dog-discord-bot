@@ -17,10 +17,11 @@ namespace
   {
     switch (handler)
     {
-    case Handler::MessageCreate: return "MESSAGE_CREATE";
-    case Handler::GuildMemberRemove: return "GUILD_MEMBER_REMOVE";
-    case Handler::GuildMemberAdd: return "GUILD_MEMBER_ADD";
+    case Handler::ChannelCreate: return "CHANNEL_CREATE";
     case Handler::GuildCreate: return "GUILD_CREATE";
+    case Handler::GuildMemberAdd: return "GUILD_MEMBER_ADD";
+    case Handler::GuildMemberRemove: return "GUILD_MEMBER_REMOVE";
+    case Handler::MessageCreate: return "MESSAGE_CREATE";
     case Handler::PresenceUpdate: return "PRESENCE_UPDATE";
     case Handler::TypingStart: return "TYPING_START";
     };

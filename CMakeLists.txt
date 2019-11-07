@@ -7,7 +7,7 @@ add_subdirectory(lib/discordpp)          # discordpp
 add_subdirectory(lib/rest-beast)         # discordpp-rest-beast
 add_subdirectory(lib/websocket-beast)    # discordpp-websocket-beast
 
-set(SOURCE_FILES main.cc read_token.cpp bot.cpp)
+set(SOURCE_FILES main.cc read_token.cpp bot.cpp guild.cpp)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

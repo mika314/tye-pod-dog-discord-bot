@@ -11,10 +11,11 @@ namespace Internal
 }
 
 enum class Handler {
-  MessageCreate,
-  GuildMemberRemove,
-  GuildMemberAdd,
+  ChannelCreate,
   GuildCreate,
+  GuildMemberAdd,
+  GuildMemberRemove,
+  MessageCreate,
   PresenceUpdate,
   TypingStart,
 };
