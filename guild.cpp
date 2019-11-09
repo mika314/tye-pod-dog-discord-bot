@@ -88,6 +88,90 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
           "My sources say no.",
           "Outlook not so good.",
           "Very doubtful.",
+
+          "IT IS CERTAIN!!",
+          "IT IS DECIDEDLY SO!!!",
+          "WITHOUT A DOUBT!",
+          "YES - DEFINITELY",
+          "YOU MAY RELY ON IT...",
+          "AS I SEE IT, YAS.....",
+          "MOST LIKELY",
+          "OUTLOOK GOOD",
+          "YIS.",
+          "SIGNS POINT TO YAS...",
+          "REPLY HAZY, TRY AGAIN!!",
+          "ASK AGAIN LATER!!!",
+          "BETTER NOT TELL YOU NOW",
+          "CANNOT PREDICT NOW",
+          "CONCENTRATE AND ASK AGAIN",
+          "DONT COUNT ON IT",
+          "MY REPLY IS NO",
+          "MY SOURCES SAY NO",
+          "OUTLOOK NOT SO GOOD!",
+          "VERY DOUBTFUL...",
+
+          "it is certain...",
+          "it is decidedly so...",
+          "without a doubt",
+          "yIs - definitely",
+          "you may rely on it",
+          "as i see it, yes",
+          "most likely",
+          "outlook good",
+          "yaaassss...",
+          "signs point to yes",
+          "reply hazy, try again",
+          "ask again later...",
+          "better not tell you now.....",
+          "cannot predict now",
+          "concentrate and ask again",
+          "don't count on it",
+          "my reply is nu.",
+          "my sources say nu.",
+          "outlook not so good",
+          "very doubtful.",
+
+          "itiscertain...",
+          "itisdecidedly so...",
+          "without-a-doubt",
+          "yIs-definitely",
+          "you may rely on it",
+          "asiseeit, yes",
+          "mostlikely",
+          "outlookgood",
+          "yes",
+          "signspointtoyes",
+          "replyhazytryagain",
+          "askagainlater...",
+          "betternottellyou now.....",
+          "cannotpredictnow",
+          "concentrateandaskagain",
+          "dontcountonit",
+          "myreplyisnu.",
+          "mysourcessaynu",
+          "outlooknotsogood",
+          "verydoubtful",
+
+          "ITISCERTAIN...",
+          "ITISDECIDEDLY SO...",
+          "WITHOUT-A-DOUBT",
+          "YIS-DEFINITELY",
+          "YOU MAY RELY ON IT",
+          "ASISEEIT, YIS",
+          "MOSTLIKELY",
+          "OUTLOOKGOOD",
+          "YAAAsS",
+          "SIGNSpOINTtOyES",
+          "REPLYhAZYtRYaGAIN",
+          "ASKaGAINlATER...",
+          "BETTERNOTTELLYOU NOW.....",
+          "CANNOTPREDICTNOW",
+          "CONCENTRATEANDASKAGAIN",
+          "DONTCOUNTONIT",
+          "MYREPLYISNuuuU.",
+          "MYSOURCESSAYNUuu",
+          "OUTLOOKNOTSOGOOD",
+          "VERYDOUBTFUL",
         };
         bot.message(
           lastChannelId,
@@ -121,11 +205,6 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     });
     return;
   }
-  if (msg["author"]["id"] != bot.self()["id"])
-  {
-    token5min = bot.invokeFromNow(5min, [this](Bot &bot) { bot.message(lastChannelId, "yeet"); });
-    return;
-  }
 }
 
 void Guild::messageOnLastChannel(Bot &bot, const std::string &msg)
@@ -145,7 +224,5 @@ void Guild::onChannelCreate(Bot &, const json &msg)
   auto name = msg["name"].get<std::string>();
   std::transform(std::begin(name), std::end(name), std::begin(name), ::tolower);
   if (name.find("rules") != std::string::npos)
-  {
     rulesChannelId = msg["id"].get<std::string>();
-  }
 }

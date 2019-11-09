@@ -18,17 +18,20 @@ namespace
     switch (handler)
     {
     case Handler::ChannelCreate: return "CHANNEL_CREATE";
+    case Handler::ChannelUpdate: return "CHANNEL_UPDATE";
     case Handler::GuildCreate: return "GUILD_CREATE";
     case Handler::GuildMemberAdd: return "GUILD_MEMBER_ADD";
     case Handler::GuildMemberRemove: return "GUILD_MEMBER_REMOVE";
+    case Handler::GuildMemberUpdate: return "GUILD_MEMBER_UPDATE";
+    case Handler::GuildRoleCreate: return "GUILD_ROLE_CREATE";
     case Handler::MessageCreate: return "MESSAGE_CREATE";
+    case Handler::MessageReactionAdd: return "MESSAGE_REACTION_ADD";
+    case Handler::MessageUpdate: return "MESSAGE_UPDATE";
     case Handler::PresenceUpdate: return "PRESENCE_UPDATE";
     case Handler::TypingStart: return "TYPING_START";
     };
   }
 } // namespace
-
-
 
 namespace Internal
 {

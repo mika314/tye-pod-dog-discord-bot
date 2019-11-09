@@ -12,10 +12,15 @@ namespace Internal
 
 enum class Handler {
   ChannelCreate,
+  ChannelUpdate,
   GuildCreate,
   GuildMemberAdd,
   GuildMemberRemove,
+  GuildMemberUpdate,
+  GuildRoleCreate,
   MessageCreate,
+  MessageReactionAdd,
+  MessageUpdate,
   PresenceUpdate,
   TypingStart,
 };
