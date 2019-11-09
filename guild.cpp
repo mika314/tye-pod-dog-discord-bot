@@ -205,11 +205,6 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     });
     return;
   }
-  if (rand() % 3 == 0 && msg["author"]["id"] != bot.self()["id"])
-  {
-    token5min = bot.invokeFromNow(5min, [this](Bot &bot) { bot.message(lastChannelId, "yeet"); });
-    return;
-  }
 }
 
 void Guild::messageOnLastChannel(Bot &bot, const std::string &msg)

@@ -14,7 +14,6 @@ public:
 
 private:
   InvokeToken otherToken;
-  InvokeToken token5min;
   InvokeToken token8ball;
   InvokeToken welcomeToken;
 
