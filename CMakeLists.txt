@@ -34,4 +34,5 @@ TARGET_LINK_LIBRARIES(
         Threads::Threads
         crypto
         ssl
+        hiredis
 )

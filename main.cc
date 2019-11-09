@@ -2,6 +2,7 @@
 #include "guild.hpp"
 #include <iostream>
 #include <unordered_map>
+#include <hiredis/hiredis.h>
 
 using json = nlohmann::json;
 using system_clock = std::chrono::system_clock;
@@ -42,6 +43,19 @@ int main()
 {
   std::cout << "Starting bot...\n\n";
   srand(time(nullptr));
+
+  auto redisCon = redisConnect("127.0.0.1", 6379);
+  if (!redisCon)
+  {
+    std::cerr << "Could not allocate redis context\n";
+    return -1;
+  }
+
+  if (redisCon->err)
+  {
+    std::cerr << "Error: " << redisCon->errstr << std::endl;
+    return -1;
+  }
 
   Bot bot;
   bot.reg(Handler::MessageCreate, [](Bot &bot, const json &msg) {
