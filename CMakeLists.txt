@@ -1,13 +1,27 @@
 cmake_minimum_required(VERSION 3.7)
 project(echo_bot)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(lib/discordpp)          # discordpp
 add_subdirectory(lib/rest-beast)         # discordpp-rest-beast
 add_subdirectory(lib/websocket-beast)    # discordpp-websocket-beast
 
-set(SOURCE_FILES main.cc read_token.cpp bot.cpp guild.cpp)
+set(SOURCE_FILES
+        base_redis.cpp
+        bot.cpp
+        gen_uuid.cpp
+        guild.cpp
+        hero.cpp
+        heroes_list.cpp
+        main.cc
+        player.cpp
+        read_token.cpp
+        redis_con.cpp
+        room.cpp
+        world.cpp
+)
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -35,4 +49,5 @@ TARGET_LINK_LIBRARIES(
         crypto
         ssl
         hiredis
+        uuid
 )

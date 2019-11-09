@@ -1,4 +1,6 @@
 #include "guild.hpp"
+#include "gen_uuid.hpp"
+#include "player.hpp"
 
 using json = nlohmann::json;
 using namespace std::literals::chrono_literals;
@@ -13,12 +15,30 @@ namespace
     str.replace(start_pos, from.length(), to);
     return true;
   }
+
+  std::string getPlayerId(const json &msg)
+  {
+    return "player/" + msg["guild_id"].get<std::string>() + "/" +
+           msg["author"]["id"].get<std::string>();
+  }
+
+  void checkError(RedisCon *redisCon, redisReply *reply)
+  {
+    if (!reply)
+    {
+      std::cerr << "Error: " << redisCon->con->errstr << std::endl;
+      exit(1);
+    }
+    if (reply->type == REDIS_REPLY_ERROR)
+      std::cerr << "Error: " << std::string{reply->str, reply->str + reply->len} << std::endl;
+  }
 } // namespace
 
-Guild::Guild(const json &msg)
+Guild::Guild(const json &msg, RedisCon &redisCon)
   : systemChannelId(msg["system_channel_id"].get<std::string>()),
     lastChannelId(systemChannelId),
-    rulesChannelId(systemChannelId)
+    rulesChannelId(systemChannelId),
+    redisCon(&redisCon)
 {
   for (const auto &ch : msg["channels"])
   {
@@ -35,6 +55,38 @@ Guild::Guild(const json &msg)
 void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
   lastChannelId = msg["channel_id"].get<std::string>();
+  Player player(*redisCon, getPlayerId(msg));
+  if (msg["content"].get<std::string>() == "quit")
+  {
+    bot.message(lastChannelId, "It was fun to play with you");
+    player.setState(Player::State::Null);
+    return;
+  }
+  switch (player.getState())
+  {
+  default:
+  case Player::State::Null: break;
+  case Player::State::HeroName:
+  {
+    auto name = msg["content"].get<std::string>();
+    bot.message(lastChannelId, "Your name is " + name);
+    player.getActiveHero().setName(name);
+    player.setState(Player::State::Playing);
+  }
+    return;
+  case Player::State::Playing:
+    auto cmd = msg["content"].get<std::string>();
+    if (cmd == "help")
+    {
+      bot.message(lastChannelId,
+                  "help - this help\n"
+                  "quit - quit the game\n");
+    }
+    else
+      bot.message(lastChannelId, "unknown command, type \"help\" for help");
+    return;
+  }
+
   if (msg["type"] == 7)
   {
     welcomeToken = bot.invokeFromNow(5s, [this, msg](Bot &bot) {
@@ -64,6 +116,28 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return false;
     };
     auto content = msg["content"].get<std::string>();
+    if (isMentioned(msg) && content.find("> play") == content.size() - strlen("> play"))
+    {
+      bot.message(lastChannelId, "You started a game");
+      Player player(*redisCon, getPlayerId(msg));
+      auto heroesList = player.getHeroesList();
+      switch (heroesList.size())
+      {
+      case 0:
+        bot.message(lastChannelId, "What is your name?");
+        player.setState(Player::State::HeroName);
+        break;
+      case 1:
+        bot.message(lastChannelId, "You are " + player.getActiveHero().getName());
+        player.setState(Player::State::Playing);
+        break;
+      default:
+        // TODO handle more than one hero
+        bot.message(lastChannelId, "You are " + player.getActiveHero().getName());
+        player.setState(Player::State::Playing);
+        break;
+      }
+    }
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
       token8ball = bot.invokeFromNow(2s, [this](Bot &bot) {
