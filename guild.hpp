@@ -1,7 +1,8 @@
 #pragma once
-#include <string>
 #include "bot.hpp"
 #include "redis_con.hpp"
+#include "world.hpp"
+#include <string>
 
 class Guild
 {
@@ -23,4 +24,5 @@ private:
   std::string rulesChannelId;
 
   RedisCon *redisCon;
+  World world;
 };

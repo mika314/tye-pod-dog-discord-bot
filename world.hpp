@@ -1,15 +1,22 @@
 #pragma once
 #include "base_redis.hpp"
-#include "coord.hpp"
+#include "pos.hpp"
 #include "room.hpp"
+#include <string>
 #include <unordered_map>
 
-class World
+class Bot;
+class Hero;
+
+class World : public BaseRedis
 {
 public:
-  World();
-  Room *getRoom(Coord);
+  World(RedisCon &, const std::string &id);
+  Room *getRoom(Pos);
+  const Room *getRoom(Pos) const;
+  void reloadMap(std::string &errLog, const std::string &git = "", const std::string &version = "");
+  std::string describeRoom(const Hero&) const;
 
 private:
-  std::unordered_map<Coord, Room, CoordHash> map;
+  std::unordered_map<Pos, Room, PosHash> map;
 };

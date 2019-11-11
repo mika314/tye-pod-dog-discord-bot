@@ -10,6 +10,7 @@ add_subdirectory(lib/websocket-beast)    # discordpp-websocket-beast
 set(SOURCE_FILES
         base_redis.cpp
         bot.cpp
+        direction.cpp
         gen_uuid.cpp
         guild.cpp
         hero.cpp
