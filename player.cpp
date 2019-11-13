@@ -1,6 +1,7 @@
 #include "player.hpp"
-#include "redis_con.hpp"
 #include "gen_uuid.hpp"
+#include "redis_con.hpp"
+#include "world.hpp"
 
 Player::Player(RedisCon &redisCon, const std::string &playerId) : BaseRedis(redisCon, playerId) {}
 
@@ -21,12 +22,8 @@ void Player::setState(State state)
   switch (state)
   {
   case State::Null: redisCon->cmd<int>("HDEL %s state", getId()); return;
-  case State::HeroName:
-    redisCon->cmd<int>("HSET %s state %s", getId(), "hero name");
-    return;
-  case State::Playing:
-    redisCon->cmd<int>("HSET %s state %s", getId(), "playing");
-    return;
+  case State::HeroName: redisCon->cmd<int>("HSET %s state %s", getId(), "hero name"); return;
+  case State::Playing: redisCon->cmd<int>("HSET %s state %s", getId(), "playing"); return;
   }
 }
 
@@ -61,4 +58,124 @@ Hero Player::getActiveHero() const
 void Player::setActiveHero(Hero hero)
 {
   redisCon->cmd<int>("HSET %s %s %s", getId(), "active hero", hero.getId());
+}
+
+std::string Player::getChannelId() const
+{
+  const auto ret = redisCon->cmd<std::optional<std::string>>("HGET %s %s", getId(), "channel ID");
+  return ret ? *ret : "";
+}
+
+void Player::setChannelId(const std::string &value)
+{
+  redisCon->cmd<int>("HSET %s %s %s", getId(), "channel ID", value.c_str());
+}
+
+void Player::startTheGame(const SendMsgCb &sendMsg, World &world, const std::string &channelId)
+{
+  setChannelId(channelId);
+  sendMsg("You started a game");
+  switch (getHeroesList().size())
+  {
+  case 0:
+    sendMsg("What is your name?");
+    setState(Player::State::HeroName);
+    break;
+  case 1:
+  {
+    auto hero = getActiveHero();
+    sendMsg("You are " + hero.getName());
+    sendMsg("Type \"help\" if you need to learn how to play.");
+    sendMsg(world.describeRoom(hero));
+    setState(Player::State::Playing);
+    break;
+  }
+  default:
+  {
+    auto hero = getActiveHero();
+    sendMsg("// TODO handle more than one hero");
+    sendMsg("You are " + hero.getName());
+    sendMsg("Type \"help\" if you need to learn how to play.");
+    sendMsg(world.describeRoom(hero));
+    setState(Player::State::Playing);
+    break;
+  }
+  }
+}
+
+void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::string &cmd)
+{
+  if (cmd == "quit" || cmd == "q")
+  {
+    sendMsg("It was fun to play with you.");
+    setState(Player::State::Null);
+    return;
+  }
+  switch (getState())
+  {
+  default:
+  case Player::State::Null: break;
+  case Player::State::HeroName:
+  {
+    auto name = cmd;
+    auto hero = getActiveHero();
+    hero.setName(name);
+    sendMsg("Your name is " + name);
+    sendMsg("Type \"help\" if you need to learn how to play.");
+    sendMsg(world.describeRoom(hero));
+    setState(Player::State::Playing);
+    return;
+  }
+  case Player::State::Playing:
+  {
+    auto hero = getActiveHero();
+    auto room = world.getRoom(hero.getPos());
+    if (cmd == "help" || cmd == "h")
+    {
+      sendMsg(R"(# Help
+* _describe_ or _desc_ - describe place where hero is standing
+* _respawn_ or _rspwn_ - respawn in the origin on the world
+* _reload_ - reload map from git repository
+* _quit_ or _q_ - quit the game
+
+## Walking
+* _north_ or _n_ - walk north
+* _east_ or _e_ - walk east
+* _south_ or _s_ - walk south
+* _west_ or _w_ - walk west
+
+* _help_ or _h_ - this help)");
+    }
+    else if (cmd == "reload")
+      world.reloadMap(sendMsg);
+    else if (cmd == "respawn" || cmd == "rspwn")
+    {
+      hero.respawn();
+      sendMsg(world.describeRoom(hero));
+    }
+    else if ([&]() {
+               for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
+               {
+                 auto d = static_cast<Direction>(i);
+                 if ((cmd == toShortString(d) || cmd == toString(d)))
+                 {
+                   if (!room || room->hasExit(d))
+                   {
+                     hero.walk(d);
+                     sendMsg(world.describeRoom(hero));
+                   }
+                   else
+                     sendMsg("You cannot walk this way...");
+                   return true;
+                 }
+               }
+               return false;
+             }())
+    {
+    }
+    else if (cmd == "desc" || cmd == "describe")
+      sendMsg(world.describeRoom(hero));
+    break;
+  }
+  }
 }

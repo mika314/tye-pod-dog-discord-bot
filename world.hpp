@@ -2,6 +2,7 @@
 #include "base_redis.hpp"
 #include "pos.hpp"
 #include "room.hpp"
+#include "send_msg_cb.hpp"
 #include <string>
 #include <unordered_map>
 
@@ -14,8 +15,8 @@ public:
   World(RedisCon &, const std::string &id);
   Room *getRoom(Pos);
   const Room *getRoom(Pos) const;
-  void reloadMap(std::string &errLog, const std::string &git = "", const std::string &version = "");
-  std::string describeRoom(const Hero&) const;
+  void reloadMap(const SendMsgCb &, const std::string &git = "", const std::string &version = "");
+  std::string describeRoom(const Hero &) const;
 
 private:
   std::unordered_map<Pos, Room, PosHash> map;

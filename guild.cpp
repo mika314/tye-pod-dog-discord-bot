@@ -59,83 +59,10 @@ Guild::Guild(const json &msg, RedisCon &redisCon)
 void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
   lastChannelId = msg["channel_id"].get<std::string>();
-  Player player(*redisCon, getPlayerId(msg));
-  if (msg["content"].get<std::string>() == "quit")
-  {
-    bot.message(lastChannelId, "It was fun to play with you");
-    player.setState(Player::State::Null);
-    return;
-  }
-  switch (player.getState())
-  {
-  default:
-  case Player::State::Null: break;
-  case Player::State::HeroName:
-  {
-    auto name = msg["content"].get<std::string>();
-    bot.message(lastChannelId, "Your name is " + name);
-    bot.message(lastChannelId, "Type \"help\" if you need to learn how to play.");
-    player.getActiveHero().setName(name);
-    player.setState(Player::State::Playing);
-    return;
-  }
-  case Player::State::Playing:
-  {
-    auto hero = player.getActiveHero();
-    Pos pos{hero.getX(), hero.getY(), hero.getZ()};
-    auto room = world.getRoom(pos);
-    auto cmd = msg["content"].get<std::string>();
-    if (cmd == "help")
-    {
-      bot.message(lastChannelId,
-                  "describe or desc - describe place where hero is standing\n"
-                  "east or e - walk east\n"
-                  "north or n - walk north\n"
-                  "quit - quit the game\n"
-                  "respawn or rspw - respawn in the origin on the world\n"
-                  "south or s - walk south\n"
-                  "west or w - walk west\n\n"
-                  "help - this help\n");
-    }
-    else if (cmd == "reload")
-    {
-      std::string errLog;
-      world.reloadMap(errLog);
-      if (!errLog.empty())
-        bot.message(lastChannelId, errLog);
-      else
-        bot.message(lastChannelId, "Map is reloaded");
-    }
-    else if (cmd == "respawn" || cmd == "rspw")
-    {
-      hero.respawn();
-      bot.message(lastChannelId, world.describeRoom(hero));
-    }
-    else if ([&]() {
-               for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-               {
-                 auto d = static_cast<Direction>(i);
-                 if ((cmd == toShortString(d) || cmd == toString(d)))
-                 {
-                   if (!room || room->hasExit(d))
-                   {
-                     hero.walk(d);
-                     bot.message(lastChannelId, world.describeRoom(hero));
-                   }
-                   else
-                     bot.message(lastChannelId, "You cannot walk this way...");
-                   return true;
-                 }
-               }
-               return false;
-             }())
-    {
-    }
-    else if (cmd == "desc" || cmd == "describe")
-      bot.message(lastChannelId, world.describeRoom(hero));
-    break;
-  }
-  }
+  auto sendMsg = [this, &bot](const std::string &msg) { bot.message(lastChannelId, msg); };
+  Player player{*redisCon, getPlayerId(msg)};
+  if (player.getChannelId() == lastChannelId)
+    player.processCmd(sendMsg, world, msg["content"].get<std::string>());
 
   if (msg["type"] == 7)
   {
@@ -167,36 +94,11 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     };
     auto content = msg["content"].get<std::string>();
     if (isMentioned(msg) && content.find("> play") == content.size() - strlen("> play"))
-    {
-      bot.message(lastChannelId, "You started a game");
-      Player player(*redisCon, getPlayerId(msg));
-      auto heroesList = player.getHeroesList();
-      switch (heroesList.size())
-      {
-      case 0:
-        bot.message(lastChannelId, "What is your name?");
-        player.setState(Player::State::HeroName);
-        break;
-      case 1:
-      {
-        auto hero = player.getActiveHero();
-        player.setState(Player::State::Playing);
-        bot.message(lastChannelId, "You are " + hero.getName());
-        bot.message(lastChannelId, "Type \"help\" if you need to learn how to play.");
-        bot.message(lastChannelId, world.describeRoom(hero));
-        break;
-      }
-      default:
-        bot.message(lastChannelId, "// TODO handle more than one hero");
-        bot.message(lastChannelId, "You are " + player.getActiveHero().getName());
-        player.setState(Player::State::Playing);
-        break;
-      }
-    }
+      Player{*redisCon, getPlayerId(msg)}.startTheGame(sendMsg, world, lastChannelId);
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
-      token8ball = bot.invokeFromNow(2s, [this](Bot &bot) {
-        const char *eightBallAnswers[] = {
+      token8ball = bot.invokeFromNow(2s, [sendMsg](Bot &bot) {
+        std::array eightBallAnswers = {
           "It is certain.",
           "It is decidedly so.",
           "Without a doubt.",
@@ -302,9 +204,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
           "OUTLOOKNOTSOGOOD",
           "VERYDOUBTFUL",
         };
-        bot.message(
-          lastChannelId,
-          eightBallAnswers[rand() % sizeof(eightBallAnswers) / sizeof(*eightBallAnswers)]);
+        sendMsg(eightBallAnswers[rand() % eightBallAnswers.size()]);
       });
       return;
     }
@@ -314,14 +214,14 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     std::transform(std::begin(content), std::end(content), std::begin(content), ::tolower);
     if (content.find("housekeeping") != std::string::npos)
     {
-      bot.message(lastChannelId, "FBI!");
+      sendMsg("FBI!");
       return;
     }
   }
   if (rand() % 10 == 0)
   {
-    otherToken = bot.invokeFromNow(10s, [this](Bot &bot) {
-      const char *words[] = {
+    otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
+      std::array words = {
         "420",          "<33",     "AAAAAAH",   "AWWWW",     "BOI",          "BOIOOO",
         "BOIU",         "Booooii", "Dab",       "HNNNNNNNG", "HNNNNNNNNNNG", "HNNNNNNNNNNNNNNNG",
         "Jdjdjjdjsiud", "LMAO",    "LOL",       "LOLL",      "LOLOL",        "Lololol",
@@ -330,7 +230,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
         "lol",          "nOH",     "omg",       "wooot",     "yAAAAAS",      "yaaaay",
         "yay",          "ye",      "yeet",
       };
-      bot.message(lastChannelId, words[rand() % sizeof(words) / sizeof(*words)]);
+      sendMsg(words[rand() % words.size()]);
     });
     return;
   }

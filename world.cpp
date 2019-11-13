@@ -6,13 +6,12 @@
 
 World::World(RedisCon &redisCon, const std::string &id) : BaseRedis(redisCon, id)
 {
-  std::string errLog;
-  reloadMap(errLog);
-  if (errLog.empty())
-    std::cerr << errLog;
+  reloadMap([](const std::string &errMsg) { std::cerr << errMsg; });
 }
 
-void World::reloadMap(std::string &errLog, const std::string &git, const std::string &version)
+void World::reloadMap(const SendMsgCb &sendMsg,
+                      const std::string &git,
+                      const std::string &version)
 {
   std::ostringstream errStrm;
   if (!git.empty())
@@ -98,9 +97,10 @@ void World::reloadMap(std::string &errLog, const std::string &git, const std::st
   }
   if (!errStrm.str().empty())
   {
-    errLog = errStrm.str();
+    sendMsg(errStrm.str());
     return;
   }
+  sendMsg("Map is reloaded.");
   map = lMap;
 }
 
