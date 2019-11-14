@@ -17,14 +17,6 @@ namespace
     return true;
   }
 
-  std::string getPlayerId(const json &msg)
-  {
-    return "player/" + msg["guild_id"].get<std::string>() + "/" +
-           msg["author"]["id"].get<std::string>();
-  }
-
-  std::string getWorldId(const json &msg) { return "world/" + msg["id"].get<std::string>(); }
-
   void checkError(RedisCon *redisCon, redisReply *reply)
   {
     if (!reply)
@@ -42,7 +34,7 @@ Guild::Guild(const json &msg, RedisCon &redisCon)
     lastChannelId(systemChannelId),
     rulesChannelId(systemChannelId),
     redisCon(&redisCon),
-    world(redisCon, getWorldId(msg))
+    world(redisCon, msg["id"].get<std::string>())
 {
   for (const auto &ch : msg["channels"])
   {
@@ -60,7 +52,8 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
   lastChannelId = msg["channel_id"].get<std::string>();
   auto sendMsg = [this, &bot](const std::string &msg) { bot.message(lastChannelId, msg); };
-  Player player{*redisCon, getPlayerId(msg)};
+  Player player{
+    *redisCon, msg["guild_id"].get<std::string>(), msg["author"]["id"].get<std::string>()};
   if (player.getChannelId() == lastChannelId)
     player.processCmd(sendMsg, world, msg["content"].get<std::string>());
 
@@ -94,7 +87,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     };
     auto content = msg["content"].get<std::string>();
     if (isMentioned(msg) && content.find("> play") == content.size() - strlen("> play"))
-      Player{*redisCon, getPlayerId(msg)}.startTheGame(sendMsg, world, lastChannelId);
+      player.startTheGame(sendMsg, world, lastChannelId);
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
       token8ball = bot.invokeFromNow(2s, [sendMsg](Bot &bot) {

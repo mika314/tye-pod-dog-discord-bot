@@ -39,3 +39,13 @@ void Room::setDescription(Direction dir, const std::string &value)
 {
   dirDescription[static_cast<int>(dir)] = value;
 }
+
+void Room::addHero(Hero &)
+{
+  // TODO
+}
+
+void Room::rmHero(const Hero &)
+{
+  // TODO
+}

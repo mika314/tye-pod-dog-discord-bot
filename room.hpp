@@ -3,6 +3,8 @@
 #include "pos.hpp"
 #include "direction.hpp"
 
+class Hero;
+
 class Room
 {
 public:
@@ -14,6 +16,8 @@ public:
   void setDescription(const std::string &);
   std::string getDescription(Direction) const;
   void setDescription(Direction, const std::string &);
+  void addHero(Hero &);
+  void rmHero(const Hero &);
 
 private:
   Pos pos;

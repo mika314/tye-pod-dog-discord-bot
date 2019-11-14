@@ -12,12 +12,15 @@ class Hero;
 class World : public BaseRedis
 {
 public:
-  World(RedisCon &, const std::string &id);
+  World(RedisCon &, const std::string &guilId);
   Room *getRoom(Pos);
   const Room *getRoom(Pos) const;
   void reloadMap(const SendMsgCb &, const std::string &git = "", const std::string &version = "");
   std::string describeRoom(const Hero &) const;
+  void addHeroToRoom(Hero &);
+  void rmHeroFromRoom(const Hero &);
 
 private:
   std::unordered_map<Pos, Room, PosHash> map;
+  std::string guildId;
 };

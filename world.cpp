@@ -4,14 +4,13 @@
 #include "redis_con.hpp"
 #include <iostream>
 
-World::World(RedisCon &redisCon, const std::string &id) : BaseRedis(redisCon, id)
+World::World(RedisCon &redisCon, const std::string &guildId)
+  : BaseRedis(redisCon, "world/" + guildId), guildId(guildId)
 {
   reloadMap([](const std::string &errMsg) { std::cerr << errMsg; });
 }
 
-void World::reloadMap(const SendMsgCb &sendMsg,
-                      const std::string &git,
-                      const std::string &version)
+void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const std::string &version)
 {
   std::ostringstream errStrm;
   if (!git.empty())
@@ -100,6 +99,7 @@ void World::reloadMap(const SendMsgCb &sendMsg,
     sendMsg(errStrm.str());
     return;
   }
+
   sendMsg("Map is reloaded.");
   map = lMap;
 }
@@ -162,4 +162,20 @@ std::string World::describeRoom(const Hero &hero) const
     }
   }
   return strm.str();
+}
+
+void World::addHeroToRoom(Hero &hero)
+{
+  auto room = getRoom(hero.getPos());
+  if (!room)
+    return;
+  room->addHero(hero);
+}
+
+void World::rmHeroFromRoom(const Hero &hero)
+{
+  auto room = getRoom(hero.getPos());
+  if (!room)
+    return;
+  room->rmHero(hero);
 }

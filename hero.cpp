@@ -2,7 +2,16 @@
 #include "redis_con.hpp"
 #include <sstream>
 
-Hero::Hero(RedisCon &redisCon, const std::string &id) : BaseRedis(redisCon, id) {}
+Hero::Hero(RedisCon &redisCon,
+           const std::string &guildId,
+           const std::string &memberId,
+           const std::string &heroId)
+  : BaseRedis(redisCon, "hero/" + guildId + "/" + memberId + "/" + heroId),
+    guildId(guildId),
+    memberId(memberId),
+    heroId(heroId)
+{
+}
 
 std::string Hero::getName() const
 {
@@ -98,9 +107,8 @@ void Hero::setFacing(Direction value)
 
 void Hero::respawn()
 {
-  setX(0);
-  setY(0);
-  setZ(0);
+  setPos(Pos{0, 0, 0});
+  setFacing(Direction::North);
 }
 
 Pos Hero::getPos() const
@@ -121,4 +129,9 @@ void Hero::walk(Direction value)
   incX(getDelta(value).x);
   incY(getDelta(value).y);
   incZ(getDelta(value).z);
+}
+
+const char *Hero::getHeroId() const
+{
+  return heroId.c_str();
 }

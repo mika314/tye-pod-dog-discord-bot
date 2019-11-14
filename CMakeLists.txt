@@ -14,7 +14,6 @@ set(SOURCE_FILES
         gen_uuid.cpp
         guild.cpp
         hero.cpp
-        heroes_list.cpp
         main.cc
         player.cpp
         read_token.cpp

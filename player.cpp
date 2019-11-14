@@ -4,7 +4,10 @@
 #include "world.hpp"
 #include <cstring>
 
-Player::Player(RedisCon &redisCon, const std::string &playerId) : BaseRedis(redisCon, playerId) {}
+Player::Player(RedisCon &redisCon, const std::string &guildId, const std::string &memberId)
+  : BaseRedis(redisCon, "player/" + guildId + "/" + memberId), guildId(guildId), memberId(memberId)
+{
+}
 
 Player::State Player::getState() const
 {
@@ -28,37 +31,40 @@ void Player::setState(State state)
   }
 }
 
-HeroesList Player::getHeroesList() const
+int Player::getHeroesCount() const
 {
-  if (auto heroesList =
-        redisCon->cmd<std::optional<std::string>>("HGET %s %s", getId(), "heroes list"))
-    return HeroesList(*redisCon, *heroesList);
-  else
-  {
-    auto newHeroesList = "heroes list/" + genUuid();
-    redisCon->cmd<int>("HSET %s %s %s", getId(), "heroes list", newHeroesList.c_str());
-    return HeroesList{*redisCon, newHeroesList};
-  }
+  return redisCon->cmd<int>("HINCRBY %s %s 0", getId(), "heroes count");
+
 }
 
-Hero Player::getActiveHero() const
+Hero Player::addNewHero()
+{
+  auto newHero = redisCon->cmd<int>("HINCRBY %s %s 1", getId(), "heroes count") - 1;
+  return Hero{*redisCon, guildId, memberId, std::to_string(newHero)};
+}
+
+Hero Player::getHero(int idx)
+{
+  return Hero{*redisCon, guildId, memberId, std::to_string(idx)};
+}
+
+Hero Player::getActiveHero()
 {
   if (auto activeHero =
         redisCon->cmd<std::optional<std::string>>("HGET %s %s", getId(), "active hero"))
-    return Hero(*redisCon, *activeHero);
+    return Hero(*redisCon, guildId, memberId, *activeHero);
   else
   {
-    auto heroesList = getHeroesList();
-    if (heroesList.isEmpty())
-      return heroesList.pushBack();
+    if (getHeroesCount() == 0)
+      return addNewHero();
     else
-      return heroesList.front();
+      return getHero(0);
   }
 }
 
 void Player::setActiveHero(Hero hero)
 {
-  redisCon->cmd<int>("HSET %s %s %s", getId(), "active hero", hero.getId());
+  redisCon->cmd<int>("HSET %s %s %s", getId(), "active hero", hero.getHeroId());
 }
 
 std::string Player::getChannelId() const
@@ -75,7 +81,7 @@ void Player::setChannelId(const std::string &value)
 void Player::startTheGame(const SendMsgCb &sendMsg, World &world, const std::string &channelId)
 {
   setChannelId(channelId);
-  switch (getHeroesList().size())
+  switch (getHeroesCount())
   {
   case 0:
     sendMsg("What is your name?");
@@ -137,7 +143,7 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
 * _respawn_ or _rspwn_ - respawn in the origin on the world
 * _reload_ - reload map from git repository
 * _quit_ or _q_ - quit the game
-* _change name_ or _chname_ - change hero's name
+* _change name_ New Name or _chname_ New Name - change hero's name
 
 ## Walking
 * _north_ or _n_ - walk north
