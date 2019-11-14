@@ -2,6 +2,7 @@
 #include "gen_uuid.hpp"
 #include "redis_con.hpp"
 #include "world.hpp"
+#include <cstring>
 
 Player::Player(RedisCon &redisCon, const std::string &playerId) : BaseRedis(redisCon, playerId) {}
 
@@ -74,7 +75,6 @@ void Player::setChannelId(const std::string &value)
 void Player::startTheGame(const SendMsgCb &sendMsg, World &world, const std::string &channelId)
 {
   setChannelId(channelId);
-  sendMsg("You started a game");
   switch (getHeroesList().size())
   {
   case 0:
@@ -137,6 +137,7 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
 * _respawn_ or _rspwn_ - respawn in the origin on the world
 * _reload_ - reload map from git repository
 * _quit_ or _q_ - quit the game
+* _change name_ or _chname_ - change hero's name
 
 ## Walking
 * _north_ or _n_ - walk north
@@ -175,7 +176,17 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
     }
     else if (cmd == "desc" || cmd == "describe")
       sendMsg(world.describeRoom(hero));
-    break;
+    else if (cmd.find("change name ") == 0 || cmd.find("chname ") == 0)
+    {
+      const auto newName = [&cmd]() {
+        auto p = cmd.find("change name ");
+        if (p == 0)
+          return cmd.substr(strlen("change name "));
+        return cmd.substr(strlen("chname "));
+      }();
+      hero.setName(newName);
+      sendMsg("Your new name is " + newName);
+    }
   }
   }
 }

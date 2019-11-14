@@ -122,17 +122,23 @@ const Room *World::getRoom(Pos pos) const
 
 std::string World::describeRoom(const Hero &hero) const
 {
-  Pos pos{hero.getX(), hero.getY(), hero.getZ()};
+  Pos pos{hero.getPos()};
+  std::ostringstream strm;
+  switch (hero.getFacing())
+  {
+  case Direction::North: strm << ":arrow_up:\n"; break;
+  case Direction::East: strm << ":arrow_right:\n"; break;
+  case Direction::South: strm << ":arrow_down:\n"; break;
+  case Direction::West: strm << ":arrow_left:\n"; break;
+  }
   auto room = getRoom(pos);
   if (!room)
   {
-    std::ostringstream strm;
     strm << "You are standing in the void.\n"
             "Your position: "
          << pos.x << "," << pos.y << "," << pos.z;
     return strm.str();
   }
-  std::ostringstream strm;
   strm << "You are standing in " << room->getDescription() << ".\n";
   std::array<const char *, static_cast<int>(Direction::Last)> relativeDirections = {
     "On front of you", "On right side", "Behind", "On left side"};
