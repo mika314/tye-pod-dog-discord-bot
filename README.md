@@ -1,7 +1,20 @@
-# Discord++ example bot, Echo<sup>Echo<sup>Echo</sup></sup>
+# Tye-Pod Dog Discord Bot
 
-## Community & Support <sup>Some incredibly nice people here!</sup>
-[Discord++ Discord Server](https://discord.gg/0usP6xmT4sQ4kIDh)
+## Features
+- mentioning the bot with the question sentence will make bot reply in
+  8ball style
+- mentioning the bot and adding word play will switch bot to mud style
+  text game
+- bot replies FBI! on any message containing housekeeping
+- with chances 1 out of 10 bot randomly replies: 420, <33, AAAAH etc
+- at 4:20PM PST bot messages 420
+- bot welcomes new joined discord user and sends user to read rules on
+  rules channel
+- bot messages about user who left a server
+
+### MUD play mode
+
+TODO
 
 ## How to Get Started <sup>Let's get it sta-arted! Let's get it started in here!</sup>
 
