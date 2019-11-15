@@ -1,5 +1,6 @@
 #include "bot.hpp"
 #include "guild.hpp"
+#include "redis_con.hpp"
 #include <iostream>
 #include <unordered_map>
 
@@ -23,11 +24,18 @@ namespace
   }
 
   std::unordered_map<std::string, Guild> guilds;
+  RedisCon redisCon;
   enum class GuildNotFoundError;
 
   Guild &getGuild(const json &msg)
   {
-    std::string guildId = msg["guild_id"].get<std::string>();
+    auto jsIt = msg.find("guild_id");
+    if (jsIt == std::end(msg))
+    {
+      std::cerr << "guild_id is not specified in the message\n";
+      throw GuildNotFoundError{};
+    }
+    std::string guildId = jsIt->get<std::string>();
     auto it = guilds.find(guildId);
     if (it == std::end(guilds))
     {
@@ -52,6 +60,9 @@ int main()
     }
     catch (GuildNotFoundError)
     {
+      if (msg["author"]["id"] == bot.self()["id"])
+        return;
+      bot.message(msg["channel_id"].get<std::string>(), "You want to have fun alone?");
     }
   });
 
@@ -73,7 +84,7 @@ int main()
   bot.reg(Handler::GuildCreate, [](Bot &bot, const json &msg) {
     // std::cout << "GUILD_CREATE: " << msg.dump(4) << std::endl;
     std::cout << "Guild: " << msg["name"].get<std::string>() << std::endl;
-    guilds.emplace(msg["id"].get<std::string>(), msg);
+    guilds.emplace(msg["id"].get<std::string>(), Guild{msg, redisCon});
   });
 
   bot.reg(Handler::PresenceUpdate, [](Bot &bot, const json &msg) {});

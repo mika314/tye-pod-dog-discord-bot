@@ -1,4 +1,7 @@
 #include "guild.hpp"
+#include "gen_uuid.hpp"
+#include "player.hpp"
+#include <sstream>
 
 using json = nlohmann::json;
 using namespace std::literals::chrono_literals;
@@ -13,12 +16,25 @@ namespace
     str.replace(start_pos, from.length(), to);
     return true;
   }
+
+  void checkError(RedisCon *redisCon, redisReply *reply)
+  {
+    if (!reply)
+    {
+      std::cerr << "Error: " << redisCon->con->errstr << std::endl;
+      exit(1);
+    }
+    if (reply->type == REDIS_REPLY_ERROR)
+      std::cerr << "Error: " << std::string{reply->str, reply->str + reply->len} << std::endl;
+  }
 } // namespace
 
-Guild::Guild(const json &msg)
+Guild::Guild(const json &msg, RedisCon &redisCon)
   : systemChannelId(msg["system_channel_id"].get<std::string>()),
     lastChannelId(systemChannelId),
-    rulesChannelId(systemChannelId)
+    rulesChannelId(systemChannelId),
+    redisCon(&redisCon),
+    world(redisCon, msg["id"].get<std::string>())
 {
   for (const auto &ch : msg["channels"])
   {
@@ -35,6 +51,12 @@ Guild::Guild(const json &msg)
 void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
   lastChannelId = msg["channel_id"].get<std::string>();
+  auto sendMsg = [this, &bot](const std::string &msg) { bot.message(lastChannelId, msg); };
+  Player player{
+    *redisCon, msg["guild_id"].get<std::string>(), msg["author"]["id"].get<std::string>()};
+  if (player.getChannelId() == lastChannelId)
+    player.processCmd(sendMsg, world, msg["content"].get<std::string>());
+
   if (msg["type"] == 7)
   {
     welcomeToken = bot.invokeFromNow(5s, [this, msg](Bot &bot) {
@@ -64,10 +86,12 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return false;
     };
     auto content = msg["content"].get<std::string>();
+    if (isMentioned(msg) && content.find("> play") == content.size() - strlen("> play"))
+      player.startTheGame(sendMsg, world, lastChannelId);
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
-      token8ball = bot.invokeFromNow(2s, [this](Bot &bot) {
-        const char *eightBallAnswers[] = {
+      token8ball = bot.invokeFromNow(2s, [sendMsg](Bot &bot) {
+        std::array eightBallAnswers = {
           "It is certain.",
           "It is decidedly so.",
           "Without a doubt.",
@@ -173,9 +197,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
           "OUTLOOKNOTSOGOOD",
           "VERYDOUBTFUL",
         };
-        bot.message(
-          lastChannelId,
-          eightBallAnswers[rand() % sizeof(eightBallAnswers) / sizeof(*eightBallAnswers)]);
+        sendMsg(eightBallAnswers[rand() % eightBallAnswers.size()]);
       });
       return;
     }
@@ -185,14 +207,14 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     std::transform(std::begin(content), std::end(content), std::begin(content), ::tolower);
     if (content.find("housekeeping") != std::string::npos)
     {
-      bot.message(lastChannelId, "FBI!");
+      sendMsg("FBI!");
       return;
     }
   }
   if (rand() % 10 == 0)
   {
-    otherToken = bot.invokeFromNow(10s, [this](Bot &bot) {
-      const char *words[] = {
+    otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
+      std::array words = {
         "420",          "<33",     "AAAAAAH",   "AWWWW",     "BOI",          "BOIOOO",
         "BOIU",         "Booooii", "Dab",       "HNNNNNNNG", "HNNNNNNNNNNG", "HNNNNNNNNNNNNNNNG",
         "Jdjdjjdjsiud", "LMAO",    "LOL",       "LOLL",      "LOLOL",        "Lololol",
@@ -201,7 +223,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
         "lol",          "nOH",     "omg",       "wooot",     "yAAAAAS",      "yaaaay",
         "yay",          "ye",      "yeet",
       };
-      bot.message(lastChannelId, words[rand() % sizeof(words) / sizeof(*words)]);
+      sendMsg(words[rand() % words.size()]);
     });
     return;
   }
