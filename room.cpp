@@ -43,7 +43,7 @@ void Room::setDescription(Direction dir, const std::string &value)
 
 void Room::addHero(Hero &hero)
 {
-  std::clog << __func__ << ": " << hero.getName() << " " << pos.x << "," << pos.y << std::endl;
+  // std::clog << __func__ << ": " << hero.getName() << " " << pos.x << "," << pos.y << std::endl;
   heroesList.insert(hero);
 }
 

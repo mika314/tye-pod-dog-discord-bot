@@ -22,7 +22,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
   auto lVersion = redisCon->cmd<std::optional<std::string>>("HGET %s version", getId());
   if (!lGit)
   {
-    lGit = "https://github.com/mika314/test-world.git";
+    lGit = "https://github.com/mika314/mikas-world.git";
     lVersion = "master";
   }
   system(("git clone --depth 1 " + *lGit + " -b " + *lVersion + " world").c_str());
@@ -38,7 +38,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
     }
     for (auto &&tomlRoom : *rooms)
     {
-      std::cout << "room\n";
+      // std::cout << "room\n";
       // pos="0,1,0"
       // description="the room"
       // north="you have mirror"
@@ -48,7 +48,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
       Room room;
       if (auto &&tomlPos = tomlRoom->get_as<std::string>("pos"))
       {
-        std::cout << "pos: " << *tomlPos << std::endl;
+        // std::cout << "pos: " << *tomlPos << std::endl;
         std::istringstream strm(*tomlPos);
         Pos pos;
         char ch;
@@ -72,7 +72,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
       }
       if (auto &&exits = tomlRoom->get_as<std::string>("exits"))
       {
-        std::cout << "exits: " << *exits << std::endl;
+        // std::cout << "exits: " << *exits << std::endl;
         for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
         {
           auto d = static_cast<Direction>(i);
@@ -214,10 +214,10 @@ std::vector<Hero> World::getAllHeroes()
 {
   std::vector<Hero> ret;
   auto ids = redisCon->cmd<std::vector<std::string>>("KEYS hero/%s/*", guildId.c_str());
-  std::clog << "Heroes in the world:\n";
+  // std::clog << "Heroes in the world:\n";
   for (auto id : ids)
   {
-    std::clog << id << std::endl;
+    // std::clog << id << std::endl;
     std::istringstream strm(id);
     std::string tmp;
     std::getline(strm, tmp, '/');
