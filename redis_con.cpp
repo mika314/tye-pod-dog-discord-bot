@@ -28,6 +28,31 @@ namespace Internal
   }
 
   template <>
+  std::vector<std::string> get<std::vector<std::string>>(redisReply *reply)
+  {
+    switch (reply->type)
+    {
+    default:
+      std::cerr << "Unexpected redis reply: " << reply->type << std::endl;
+      throw RedisUnexpectedReplyError{};
+    case REDIS_REPLY_ARRAY:
+    {
+      std::vector<std::string> ret;
+      for (auto elem = reply->element; elem != reply->element + reply->elements; ++elem)
+      {
+        if ((*elem)->type != REDIS_REPLY_STRING)
+        {
+          std::cerr << "Unexpected redis type in the array: " << reply->type << std::endl;
+          throw RedisUnexpectedReplyError{};
+        }
+        ret.emplace_back((*elem)->str, (*elem)->len);
+      }
+      return ret;
+    }
+    }
+  }
+
+  template <>
   int get<int>(redisReply *reply)
   {
     if (reply->type != REDIS_REPLY_INTEGER)

@@ -1,5 +1,6 @@
 #include "hero.hpp"
 #include "redis_con.hpp"
+#include <cstring>
 #include <sstream>
 
 Hero::Hero(RedisCon &redisCon,
@@ -30,6 +31,7 @@ int Hero::getX() const
 
 int Hero::incX(int value) const
 {
+  // TODO move hero in rooms
   std::ostringstream strm;
   strm << value;
   return redisCon->cmd<int>("HINCRBY %s x %s", getId(), strm.str().c_str());
@@ -49,6 +51,7 @@ int Hero::getY() const
 
 int Hero::incY(int value) const
 {
+  // TODO move hero in rooms
   std::ostringstream strm;
   strm << value;
   return redisCon->cmd<int>("HINCRBY %s y %s", getId(), strm.str().c_str());
@@ -68,6 +71,7 @@ int Hero::getZ() const
 
 int Hero::incZ(int value) const
 {
+  // TODO move hero in rooms
   std::ostringstream strm;
   strm << value;
   return redisCon->cmd<int>("HINCRBY %s z %s", getId(), strm.str().c_str());
@@ -118,6 +122,7 @@ Pos Hero::getPos() const
 
 void Hero::setPos(Pos value)
 {
+  // TODO move hero in rooms
   setX(value.x);
   setY(value.y);
   setZ(value.z);
@@ -134,4 +139,9 @@ void Hero::walk(Direction value)
 const char *Hero::getHeroId() const
 {
   return heroId.c_str();
+}
+
+bool Hero::operator==(const Hero &other) const
+{
+  return strcmp(getId(), other.getId()) == 0;
 }

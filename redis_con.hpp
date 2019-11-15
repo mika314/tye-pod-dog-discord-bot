@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <optional>
+#include <vector>
 
 enum class RedisInitError;
 enum class RedisUnexpectedReplyError;
@@ -17,6 +18,9 @@ namespace Internal
 
   template <>
   std::optional<std::string> get<std::optional<std::string>>(redisReply *);
+
+  template <>
+  std::vector<std::string> get<std::vector<std::string>>(redisReply *);
 
   template <>
   int get<int>(redisReply *);

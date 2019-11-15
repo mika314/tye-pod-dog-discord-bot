@@ -19,6 +19,7 @@ public:
   std::string describeRoom(const Hero &) const;
   void addHeroToRoom(Hero &);
   void rmHeroFromRoom(const Hero &);
+  std::vector<Hero> getAllHeroes();
 
 private:
   std::unordered_map<Pos, Room, PosHash> map;

@@ -2,6 +2,7 @@
 #include "base_redis.hpp"
 #include "direction.hpp"
 #include "pos.hpp"
+#include <unordered_set>
 
 class Hero : public BaseRedis
 {
@@ -25,6 +26,7 @@ public:
   void respawn();
   void walk(Direction);
   const char *getHeroId() const;
+  bool operator==(const Hero&) const;
 
 private:
   void setX(int);
@@ -34,3 +36,10 @@ private:
   std::string memberId;
   std::string heroId;
 };
+
+struct HeroHash
+{
+  size_t operator()(const Hero &hero) const { return std::hash<const char *>{}(hero.getId()); }
+};
+
+using HeroesList = std::unordered_set<Hero, HeroHash>;

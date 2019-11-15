@@ -51,3 +51,5 @@ TARGET_LINK_LIBRARIES(
         hiredis
         uuid
 )
+
+set(CMAKE_BUILD_TYPE Debug)

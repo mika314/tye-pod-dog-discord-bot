@@ -1,4 +1,5 @@
 #include "room.hpp"
+#include <iostream>
 
 Pos Room::getPos() const
 {
@@ -40,12 +41,18 @@ void Room::setDescription(Direction dir, const std::string &value)
   dirDescription[static_cast<int>(dir)] = value;
 }
 
-void Room::addHero(Hero &)
+void Room::addHero(Hero &hero)
 {
-  // TODO
+  std::clog << __func__ << ": " << hero.getName() << " " << pos.x << "," << pos.y << std::endl;
+  heroesList.insert(hero);
 }
 
-void Room::rmHero(const Hero &)
+void Room::rmHero(const Hero &hero)
 {
-  // TODO
+  heroesList.erase(hero);
+}
+
+const HeroesList &Room::getHeroesList() const
+{
+  return heroesList;
 }

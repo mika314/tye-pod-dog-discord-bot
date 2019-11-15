@@ -1,9 +1,9 @@
 #pragma once
 #include "base_redis.hpp"
-#include "pos.hpp"
 #include "direction.hpp"
-
-class Hero;
+#include "hero.hpp"
+#include "pos.hpp"
+#include <unordered_set>
 
 class Room
 {
@@ -18,10 +18,12 @@ public:
   void setDescription(Direction, const std::string &);
   void addHero(Hero &);
   void rmHero(const Hero &);
+  const HeroesList& getHeroesList() const;
 
 private:
   Pos pos;
   std::string description;
   std::array<std::string, static_cast<int>(Direction::Last)> dirDescription;
   std::array<bool, static_cast<int>(Direction::Last)> exits{};
+  HeroesList heroesList;
 };

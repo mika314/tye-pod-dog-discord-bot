@@ -99,9 +99,11 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
     sendMsg(errStrm.str());
     return;
   }
+  map = lMap;
+  for (auto &hero : getAllHeroes())
+    addHeroToRoom(hero);
 
   sendMsg("Map is reloaded.");
-  map = lMap;
 }
 
 Room *World::getRoom(Pos pos)
@@ -151,6 +153,30 @@ std::string World::describeRoom(const Hero &hero) const
     facing =
       static_cast<Direction>((static_cast<int>(facing) + 1) % static_cast<int>(Direction::Last));
   }
+
+  const auto &heroesList = room->getHeroesList();
+  const auto sz = heroesList.size();
+  if (sz <= 1)
+    strm << "Where are no other players here.\n";
+  else
+  {
+    strm << "You are here with";
+    auto cnt = 0;
+    for (const auto &h : heroesList)
+    {
+      if (hero == h)
+        continue;
+      if (cnt == 0)
+        strm << " ";
+      else if (cnt == sz - 1)
+        strm << " and ";
+      else
+        strm << ", ";
+      strm << h.getName();
+    }
+    strm << ".\n";
+  }
+
   for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
   {
     auto d = static_cast<Direction>(i);
@@ -168,7 +194,11 @@ void World::addHeroToRoom(Hero &hero)
 {
   auto room = getRoom(hero.getPos());
   if (!room)
+  {
+    std::cerr << "Room " << hero.getPos().x << "," << hero.getPos().y << "," << hero.getPos().z
+              << " does not exist.\n";
     return;
+  }
   room->addHero(hero);
 }
 
@@ -178,4 +208,27 @@ void World::rmHeroFromRoom(const Hero &hero)
   if (!room)
     return;
   room->rmHero(hero);
+}
+
+std::vector<Hero> World::getAllHeroes()
+{
+  std::vector<Hero> ret;
+  auto ids = redisCon->cmd<std::vector<std::string>>("KEYS hero/%s/*", guildId.c_str());
+  std::clog << "Heroes in the world:\n";
+  for (auto id : ids)
+  {
+    std::clog << id << std::endl;
+    std::istringstream strm(id);
+    std::string tmp;
+    std::getline(strm, tmp, '/');
+    assert(tmp == "hero");
+    std::getline(strm, tmp, '/');
+    assert(tmp == guildId);
+    std::string memberId;
+    std::getline(strm, memberId, '/');
+    std::string heroId;
+    std::getline(strm, heroId, '/');
+    ret.emplace_back(*redisCon, guildId, memberId, heroId);
+  }
+  return ret;
 }
