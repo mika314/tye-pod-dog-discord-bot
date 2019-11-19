@@ -2,6 +2,7 @@
 #include "cpptoml/cpptoml.h"
 #include "hero.hpp"
 #include "redis_con.hpp"
+#include "world_desc_error.hpp"
 #include <iostream>
 
 World::World(RedisCon &redisCon, const std::string &guildId)
@@ -45,48 +46,9 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
       // west="a PC with two screens"
       // south="a couch"
       // exits="ns"
-      Room room;
-      if (auto &&tomlPos = tomlRoom->get_as<std::string>("pos"))
-      {
-        // std::cout << "pos: " << *tomlPos << std::endl;
-        std::istringstream strm(*tomlPos);
-        Pos pos;
-        char ch;
-        strm >> pos.x >> ch >> pos.y >> ch >> pos.z;
-        room.setPos(pos);
-      }
-      else
-      {
-        errStrm << "Room does not have pos specified\n";
-        break;
-      }
-
-      if (auto &&desc = tomlRoom->get_as<std::string>("description"))
-        room.setDescription(*desc);
-
-      for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-      {
-        auto d = static_cast<Direction>(i);
-        if (auto &&desc = tomlRoom->get_as<std::string>(toString(d)))
-          room.setDescription(d, *desc);
-      }
-      if (auto &&exits = tomlRoom->get_as<std::string>("exits"))
-      {
-        // std::cout << "exits: " << *exits << std::endl;
-        for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-        {
-          auto d = static_cast<Direction>(i);
-          if (exits->find(toShortString(d)) != std::string::npos)
-            room.setExit(d, true);
-        }
-      }
-      else
-      {
-        errStrm << "Exists for the room are not specified.\n";
-        break;
-      }
-
-      lMap.emplace(room.getPos(), room);
+      Room room{*tomlRoom};
+      const auto pos = room.getPos();
+      lMap.emplace(pos, std::move(room));
     }
   }
   catch (const cpptoml::parse_exception &err)
@@ -94,12 +56,16 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
     errStrm << err.what() << std::endl;
     system("rm -rf world");
   }
+  catch (const WorldDescError &err)
+  {
+    errStrm << err.what() << std::endl;
+  }
   if (!errStrm.str().empty())
   {
     sendMsg(errStrm.str());
     return;
   }
-  map = lMap;
+  map = std::move(lMap);
   for (auto &hero : getAllHeroes())
     addHeroToRoom(hero);
 

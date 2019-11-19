@@ -6,6 +6,7 @@ enum class Direction { North = 0, East = 1, South = 2, West = 3, Last };
 
 std::string toString(Direction);
 std::string toShortString(Direction);
+Direction toDirection(const std::string&);
 
 constexpr Pos getDelta(Direction value)
 {
