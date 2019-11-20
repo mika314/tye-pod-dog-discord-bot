@@ -2,7 +2,7 @@
 #include "base_redis.hpp"
 #include "pos.hpp"
 #include "room.hpp"
-#include "send_msg_cb.hpp"
+#include <ostream>
 #include <string>
 #include <unordered_map>
 
@@ -15,8 +15,8 @@ public:
   World(RedisCon &, const std::string &guilId);
   Room *getRoom(Pos);
   const Room *getRoom(Pos) const;
-  void reloadMap(const SendMsgCb &, const std::string &git = "", const std::string &version = "");
-  std::string describeRoom(const Hero &) const;
+  void reloadMap(std::ostream &, const std::string &git = "", const std::string &version = "");
+  void describeRoom(std::ostream &, const Hero &hero) const;
   void addHeroToRoom(Hero &);
   void rmHeroFromRoom(const Hero &);
   std::vector<Hero> getAllHeroes();

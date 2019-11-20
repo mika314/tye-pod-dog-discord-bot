@@ -55,7 +55,11 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
   Player player{
     *redisCon, msg["guild_id"].get<std::string>(), msg["author"]["id"].get<std::string>()};
   if (player.getChannelId() == lastChannelId)
-    player.processCmd(sendMsg, world, msg["content"].get<std::string>());
+  {
+    std::ostringstream strm;
+    player.processCmd(strm, world, msg["content"].get<std::string>());
+    sendMsg(strm.str());
+  }
 
   if (msg["type"] == 7)
   {
@@ -87,7 +91,11 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     };
     auto content = msg["content"].get<std::string>();
     if (isMentioned(msg) && content.find("> play") == content.size() - strlen("> play"))
-      player.startTheGame(sendMsg, world, lastChannelId);
+    {
+      std::ostringstream strm;
+      player.startTheGame(strm, world, lastChannelId);
+      sendMsg(strm.str());
+    }
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
       token8ball = bot.invokeFromNow(2s, [sendMsg](Bot &bot) {

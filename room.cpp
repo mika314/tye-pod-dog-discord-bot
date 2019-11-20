@@ -2,6 +2,7 @@
 #include "cpptoml/cpptoml.h"
 #include "door_button.hpp"
 #include "pos.hpp"
+#include "world.hpp"
 #include "world_desc_error.hpp"
 #include <iostream>
 
@@ -125,4 +126,69 @@ void Room::rmHero(const Hero &hero)
 const HeroesList &Room::getHeroesList() const
 {
   return heroesList;
+}
+
+void Room::describe(std::ostream &strm, const World &world, const Hero &hero) const
+{
+  strm << "You are standing in " << getDescription() << ".\n";
+  if (!itemsList.empty())
+  {
+    strm << "You can see here: ";
+    auto cnt = 0;
+    for (const auto &item : itemsList)
+    {
+      if (cnt == itemsList.size() - 1 && cnt != 0)
+        strm << " and ";
+      else if (cnt != 0)
+        strm << ", ";
+      strm << item->getName();
+      ++cnt;
+    }
+    strm << ".\n";
+  }
+  std::array<const char *, static_cast<int>(Direction::Last)> relativeDirections = {
+    "On front of you", "On right side", "Behind", "On left side"};
+  auto facing = hero.getFacing();
+  for (auto i = 0; i < static_cast<int>(Direction::Last); ++i)
+  {
+    auto desc = getDescription(facing);
+    if (!desc.empty())
+      strm << relativeDirections[i] << " " << desc << ".\n";
+    facing =
+      static_cast<Direction>((static_cast<int>(facing) + 1) % static_cast<int>(Direction::Last));
+  }
+
+  const auto &heroesList = getHeroesList();
+  const auto sz = heroesList.size();
+  if (sz <= 1)
+    strm << "Where are no other players here.\n";
+  else
+  {
+    strm << "You are here with";
+    auto cnt = 0;
+    for (const auto &h : heroesList)
+    {
+      if (hero == h)
+        continue;
+      if (cnt == 0)
+        strm << " ";
+      else if (cnt == sz - 1)
+        strm << " and ";
+      else
+        strm << ", ";
+      strm << h.getName();
+    }
+    strm << ".\n";
+  }
+
+  for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
+  {
+    auto d = static_cast<Direction>(i);
+    if (hasExit(d))
+    {
+      auto newRoom = world.getRoom(pos + getDelta(d));
+      strm << "You can go " << toString(d) << " to "
+           << (newRoom ? newRoom->getDescription() : "the void") << ".\n";
+    }
+  }
 }
