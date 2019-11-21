@@ -143,6 +143,7 @@ void Player::processCmd(std::ostream &strm, World &world, const std::string &cmd
 * _reload_ - reload map from git repository
 * _quit_ or _q_ - quit the game
 * _change name_ New Name or _chname_ New Name - change hero's name
+* _look at_ item - look at the item
 
 ## Walking
 * _north_ or _n_ - walk north
@@ -192,6 +193,11 @@ void Player::processCmd(std::ostream &strm, World &world, const std::string &cmd
       hero.setName(newName);
       strm << "Your new name is " << newName << "\n";
     }
+    else if (world.processCmd(strm, hero, cmd))
+    {
+    }
+    else
+      strm << "Unknown command\n";
   }
   }
 }

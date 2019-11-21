@@ -192,3 +192,52 @@ void Room::describe(std::ostream &strm, const World &world, const Hero &hero) co
     }
   }
 }
+
+bool Room::processCmd(std::ostream &strm, Hero &hero, const std::string &cmd)
+{
+  if (cmd.find("look at ") == 0)
+  {
+    const auto itemName = cmd.substr(strlen("look at "));
+    auto it = std::find_if(std::begin(itemsList),
+                           std::end(itemsList),
+                           [&itemName](const auto &item) { return item->getName() == itemName; });
+    if (it != std::end(itemsList))
+    {
+      strm << "You are looking at " << (*it)->getName() << ".\n";
+      const auto actionsList = (*it)->getActionsList();
+      if (actionsList.empty())
+        strm << "Nothing interesing.\n";
+      else
+        strm << "You can ";
+      auto cnt = 0;
+      for (const auto &action : actionsList)
+      {
+        if (cnt == 0) {}
+        else if (actionsList.size() != 1 && cnt == actionsList.size() - 1)
+          strm << " and ";
+        else
+          strm << ", ";
+        strm << action;
+        ++cnt;
+      }
+      strm << " this item.\n";
+    }
+    else
+      strm << "There is no " << cmd.substr(strlen("look at ")) << ".\n";
+    return true;
+  }
+  for (const auto &item : itemsList)
+  {
+    const auto itemName = item->getName();
+    for (const auto &action : item->getActionsList())
+    {
+      if (cmd.find(action + " ") == 0)
+      {
+        if (cmd.substr(action.size() + 1) != itemName)
+          continue;
+        return item->invoke(strm, *this, action);
+      }
+    }
+  }
+  return false;
+}

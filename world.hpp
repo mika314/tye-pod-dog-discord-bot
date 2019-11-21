@@ -20,6 +20,7 @@ public:
   void addHeroToRoom(Hero &);
   void rmHeroFromRoom(const Hero &);
   std::vector<Hero> getAllHeroes();
+  bool processCmd(std::ostream &, Hero &, const std::string &cmd);
 
 private:
   std::unordered_map<Pos, Room, PosHash> map;

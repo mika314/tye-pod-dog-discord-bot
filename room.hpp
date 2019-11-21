@@ -32,6 +32,7 @@ public:
   void rmHero(const Hero &);
   const HeroesList &getHeroesList() const;
   void describe(std::ostream &, const World &, const Hero &) const;
+  bool processCmd(std::ostream &, Hero &, const std::string &cmd);
 
 private:
   Pos pos;

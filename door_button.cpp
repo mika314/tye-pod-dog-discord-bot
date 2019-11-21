@@ -21,14 +21,18 @@ std::vector<std::string> DoorButton::getActionsList() const
   return {{"push"}};
 }
 
-void DoorButton::invoke(std::ostream &strm, Room &room, const std::string &action)
+bool DoorButton::invoke(std::ostream &strm, Room &room, const std::string &action)
 {
   if (action == "push")
   {
     room.setExit(direction, !room.hasExit(direction));
     strm << "Door on " << toString(direction) << " is "
          << (room.hasExit(direction) ? "opening" : "closing") << ".";
+    return true;
   }
   else
+  {
     strm << "Unknown action: " << action;
+    return false;
+  }
 }

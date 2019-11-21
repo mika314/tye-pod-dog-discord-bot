@@ -148,3 +148,11 @@ std::vector<Hero> World::getAllHeroes()
   }
   return ret;
 }
+
+bool World::processCmd(std::ostream &strm, Hero &hero, const std::string &cmd)
+{
+  auto room = getRoom(hero.getPos());
+  if (!room)
+    return false;
+  return room->processCmd(strm, hero, cmd);
+}
