@@ -37,8 +37,8 @@ public:
 private:
   Pos pos;
   std::string description;
-  std::array<std::string, static_cast<int>(Direction::Last)> dirDescription;
-  std::array<bool, static_cast<int>(Direction::Last)> exits{};
+  std::array<std::string, Direction_META.size()> dirDescription;
+  std::array<bool, Direction_META.size()> exits{};
   HeroesList heroesList;
   std::vector<std::unique_ptr<Item>> itemsList;
 };

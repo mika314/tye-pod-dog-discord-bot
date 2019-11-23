@@ -161,9 +161,8 @@ void Player::processCmd(std::ostream &strm, World &world, const std::string &cmd
       world.describeRoom(strm, hero);
     }
     else if ([&]() {
-               for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
+               for (auto d: Direction_META)
                {
-                 auto d = static_cast<Direction>(i);
                  if ((cmd == toShortString(d) || cmd == toString(d)))
                  {
                    if (!room || room->hasExit(d))

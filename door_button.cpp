@@ -9,7 +9,7 @@ DoorButton::DoorButton(const cpptoml::table &desc)
       if (!tomlDirection)
         throw WorldDescError{"Direction e xpected error"};
       auto ret = toDirection(*tomlDirection);
-      if (ret == Direction::Last)
+      if (ret == Direction::Unknown)
         throw WorldDescError{"Invalid direction error: " + *tomlDirection};
       return ret;
     }()}

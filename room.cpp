@@ -25,27 +25,21 @@ Room::Room(const cpptoml::table &tomlRoom)
     }()},
 
     dirDescription{[&tomlRoom]() {
-      std::array<std::string, static_cast<int>(Direction::Last)> ret;
-      for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-      {
-        auto d = static_cast<Direction>(i);
+      std::array<std::string, Direction_META.size()> ret;
+      for (auto d: Direction_META)
         if (auto &&desc = tomlRoom.get_as<std::string>(toString(d)))
-          ret[i] = *desc;
-      }
+          ret[static_cast<int>(d)] = *desc;
       return ret;
     }()},
 
     exits{[&tomlRoom]() {
-      std::array<bool, static_cast<int>(Direction::Last)> ret{};
+      std::array<bool, Direction_META.size()> ret{};
       if (auto &&exits = tomlRoom.get_as<std::string>("exits"))
       {
         // std::cout << "exits: " << *exits << std::endl;
-        for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-        {
-          auto d = static_cast<Direction>(i);
+        for (auto d: Direction_META)
           if (exits->find(toShortString(d)) != std::string::npos)
-            ret[i] = true;
-        }
+            ret[static_cast<int>(d)] = true;
       }
       else
         throw WorldDescError{"Exists for the room are not specified."};
@@ -146,16 +140,15 @@ void Room::describe(std::ostream &strm, const World &world, const Hero &hero) co
     }
     strm << ".\n";
   }
-  std::array<const char *, static_cast<int>(Direction::Last)> relativeDirections = {
+  std::array<const char *, 4> relativeDirections = {
     "On front of you", "On right side", "Behind", "On left side"};
   auto facing = hero.getFacing();
-  for (auto i = 0; i < static_cast<int>(Direction::Last); ++i)
+  for (auto d : relativeDirections)
   {
     auto desc = getDescription(facing);
     if (!desc.empty())
-      strm << relativeDirections[i] << " " << desc << ".\n";
-    facing =
-      static_cast<Direction>((static_cast<int>(facing) + 1) % static_cast<int>(Direction::Last));
+      strm << d << " " << desc << ".\n";
+    facing = static_cast<Direction>((static_cast<int>(facing) + 1) % relativeDirections.size());
   }
 
   const auto &heroesList = getHeroesList();
@@ -181,16 +174,13 @@ void Room::describe(std::ostream &strm, const World &world, const Hero &hero) co
     strm << ".\n";
   }
 
-  for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-  {
-    auto d = static_cast<Direction>(i);
+  for (auto d: Direction_META)
     if (hasExit(d))
     {
       auto newRoom = world.getRoom(pos + getDelta(d));
       strm << "You can go " << toString(d) << " to "
            << (newRoom ? newRoom->getDescription() : "the void") << ".\n";
     }
-  }
 }
 
 bool Room::processCmd(std::ostream &strm, Hero &hero, const std::string &cmd)
