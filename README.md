@@ -1,16 +1,14 @@
-# Tye-Pod Dog Discord Bot
-
 ## Features
 - mentioning the bot with the question sentence will make bot reply in
   8ball style
-- mentioning the bot and adding word play will switch bot to mud style
+- mentioning the bot and adding word "play" will switch bot to mud style
   text game
 - bot replies FBI! on any message containing housekeeping
 - with chances 1 out of 10 bot randomly replies: 420, <33, AAAAH etc
 - at 4:20PM PST bot messages 420
-- bot welcomes new joined discord user and sends user to read rules on
+- bot welcomes newly joined discord user and sends the user to read rules on
   rules channel
-- bot messages about user who left a server
+- bot messages about the user who left a server
 
 ### MUD play mode
 
