@@ -147,9 +147,24 @@ const nlohmann::json &Bot::self() const
   return bot->self;
 }
 
-void Bot::message(const std::string &channelId, const std::string &message)
+void Bot::message(const std::string &channelId, const std::string &msg)
 {
-  bot->message(channelId, message);
+  try
+  {
+    bot->message(channelId, msg);
+  }
+  catch (discordpp::ratelimit l)
+  {
+    std::cerr << "rate limit\n";
+    auto ptr = std::make_shared<InvokeToken *>(nullptr);
+    auto token =
+      invokeFromNow(std::chrono::milliseconds{l.millis}, [channelId, msg, ptr](Bot &bot) {
+        bot.message(channelId, msg);
+        bot.tokens.erase(**ptr);
+      });
+    *ptr = &token;
+    tokens.emplace(std::move(token));
+  }
 }
 
 InvokeToken Bot::invokeAt(std::chrono::system_clock::time_point timePoint,
@@ -177,3 +192,7 @@ InvokeToken::InvokeToken(Internal::Timer &&timer)
 {
 }
 
+bool InvokeToken::operator==(const InvokeToken &token) const
+{
+  return timer == token.timer;
+}

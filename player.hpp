@@ -1,7 +1,7 @@
 #pragma once
 #include "base_redis.hpp"
 #include "hero.hpp"
-#include "send_msg_cb.hpp"
+#include <ostream>
 #include <optional>
 #include <string>
 
@@ -22,8 +22,8 @@ public:
   void setActiveHero(Hero);
   std::string getChannelId() const;
   void setChannelId(const std::string &);
-  void startTheGame(const SendMsgCb &, World &world, const std::string &channelId);
-  void processCmd(const SendMsgCb &, World &world, const std::string &cmd);
+  void startTheGame(std::ostream &, World &world, const std::string &channelId);
+  void processCmd(std::ostream &, World &world, const std::string &cmd);
 
 private:
   std::string guildId;

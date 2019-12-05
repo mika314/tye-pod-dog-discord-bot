@@ -1,3 +1,5 @@
+# Tye-Pod Dog Discord Bot
+
 ## Features
 - mentioning the bot with the question sentence will make bot reply in
   8ball style

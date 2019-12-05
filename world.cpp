@@ -2,17 +2,17 @@
 #include "cpptoml/cpptoml.h"
 #include "hero.hpp"
 #include "redis_con.hpp"
+#include "world_desc_error.hpp"
 #include <iostream>
 
 World::World(RedisCon &redisCon, const std::string &guildId)
   : BaseRedis(redisCon, "world/" + guildId), guildId(guildId)
 {
-  reloadMap([](const std::string &errMsg) { std::cerr << errMsg; });
+  reloadMap(std::cerr);
 }
 
-void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const std::string &version)
+void World::reloadMap(std::ostream &strm, const std::string &git, const std::string &version)
 {
-  std::ostringstream errStrm;
   if (!git.empty())
   {
     redisCon->cmd<int>("HSET %s git %s", getId(), git.c_str());
@@ -23,7 +23,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
   if (!lGit)
   {
     lGit = "https://github.com/mika314/mikas-world.git";
-    lVersion = "master";
+    lVersion = "dev";
   }
   system(("git clone --depth 1 " + *lGit + " -b " + *lVersion + " world").c_str());
   std::unordered_map<Pos, Room, PosHash> lMap;
@@ -34,7 +34,8 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
     auto &&rooms = toml->get_table_array("room");
     if (!rooms)
     {
-      errStrm << "no rooms\n";
+      strm << "no rooms\n";
+      return;
     }
     for (auto &&tomlRoom : *rooms)
     {
@@ -45,65 +46,27 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
       // west="a PC with two screens"
       // south="a couch"
       // exits="ns"
-      Room room;
-      if (auto &&tomlPos = tomlRoom->get_as<std::string>("pos"))
-      {
-        // std::cout << "pos: " << *tomlPos << std::endl;
-        std::istringstream strm(*tomlPos);
-        Pos pos;
-        char ch;
-        strm >> pos.x >> ch >> pos.y >> ch >> pos.z;
-        room.setPos(pos);
-      }
-      else
-      {
-        errStrm << "Room does not have pos specified\n";
-        break;
-      }
-
-      if (auto &&desc = tomlRoom->get_as<std::string>("description"))
-        room.setDescription(*desc);
-
-      for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-      {
-        auto d = static_cast<Direction>(i);
-        if (auto &&desc = tomlRoom->get_as<std::string>(toString(d)))
-          room.setDescription(d, *desc);
-      }
-      if (auto &&exits = tomlRoom->get_as<std::string>("exits"))
-      {
-        // std::cout << "exits: " << *exits << std::endl;
-        for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-        {
-          auto d = static_cast<Direction>(i);
-          if (exits->find(toShortString(d)) != std::string::npos)
-            room.setExit(d, true);
-        }
-      }
-      else
-      {
-        errStrm << "Exists for the room are not specified.\n";
-        break;
-      }
-
-      lMap.emplace(room.getPos(), room);
+      Room room{*tomlRoom};
+      const auto pos = room.getPos();
+      lMap.emplace(pos, std::move(room));
     }
   }
   catch (const cpptoml::parse_exception &err)
   {
-    errStrm << err.what() << std::endl;
+    strm << err.what() << "\n";
     system("rm -rf world");
-  }
-  if (!errStrm.str().empty())
-  {
-    sendMsg(errStrm.str());
     return;
   }
-  map = lMap;
+  catch (const WorldDescError &err)
+  {
+    strm << err.what() << "\n";
+    return;
+  }
+  map = std::move(lMap);
   for (auto &hero : getAllHeroes())
     addHeroToRoom(hero);
 
-  sendMsg("Map is reloaded.");
+  strm << "Map is reloaded.\n";
 }
 
 Room *World::getRoom(Pos pos)
@@ -122,10 +85,9 @@ const Room *World::getRoom(Pos pos) const
   return &it->second;
 }
 
-std::string World::describeRoom(const Hero &hero) const
+void World::describeRoom(std::ostream& strm, const Hero &hero) const
 {
   Pos pos{hero.getPos()};
-  std::ostringstream strm;
   switch (hero.getFacing())
   {
   case Direction::North: strm << ":arrow_up:\n"; break;
@@ -138,56 +100,10 @@ std::string World::describeRoom(const Hero &hero) const
   {
     strm << "You are standing in the void.\n"
             "Your position: "
-         << pos.x << "," << pos.y << "," << pos.z;
-    return strm.str();
+         << pos.x << "," << pos.y << "," << pos.z << "\n";
+    return;
   }
-  strm << "You are standing in " << room->getDescription() << ".\n";
-  std::array<const char *, static_cast<int>(Direction::Last)> relativeDirections = {
-    "On front of you", "On right side", "Behind", "On left side"};
-  auto facing = hero.getFacing();
-  for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-  {
-    auto desc = room->getDescription(facing);
-    if (!desc.empty())
-      strm << relativeDirections[i] << " " << desc << ".\n";
-    facing =
-      static_cast<Direction>((static_cast<int>(facing) + 1) % static_cast<int>(Direction::Last));
-  }
-
-  const auto &heroesList = room->getHeroesList();
-  const auto sz = heroesList.size();
-  if (sz <= 1)
-    strm << "Where are no other players here.\n";
-  else
-  {
-    strm << "You are here with";
-    auto cnt = 0;
-    for (const auto &h : heroesList)
-    {
-      if (hero == h)
-        continue;
-      if (cnt == 0)
-        strm << " ";
-      else if (cnt == sz - 1)
-        strm << " and ";
-      else
-        strm << ", ";
-      strm << h.getName();
-    }
-    strm << ".\n";
-  }
-
-  for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
-  {
-    auto d = static_cast<Direction>(i);
-    if (room->hasExit(d))
-    {
-      auto newRoom = getRoom(pos + getDelta(d));
-      strm << "You can go " << toString(d) << " to "
-           << (newRoom ? newRoom->getDescription() : "the void") << ".\n";
-    }
-  }
-  return strm.str();
+  room->describe(strm, *this, hero);
 }
 
 void World::addHeroToRoom(Hero &hero)
@@ -231,4 +147,12 @@ std::vector<Hero> World::getAllHeroes()
     ret.emplace_back(*redisCon, guildId, memberId, heroId);
   }
   return ret;
+}
+
+bool World::processCmd(std::ostream &strm, Hero &hero, const std::string &cmd)
+{
+  auto room = getRoom(hero.getPos());
+  if (!room)
+    return false;
+  return room->processCmd(strm, hero, cmd);
 }

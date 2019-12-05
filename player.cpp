@@ -34,7 +34,6 @@ void Player::setState(State state)
 int Player::getHeroesCount() const
 {
   return redisCon->cmd<int>("HINCRBY %s %s 0", getId(), "heroes count");
-
 }
 
 Hero Player::addNewHero()
@@ -78,42 +77,42 @@ void Player::setChannelId(const std::string &value)
   redisCon->cmd<int>("HSET %s %s %s", getId(), "channel ID", value.c_str());
 }
 
-void Player::startTheGame(const SendMsgCb &sendMsg, World &world, const std::string &channelId)
+void Player::startTheGame(std::ostream &strm, World &world, const std::string &channelId)
 {
   setChannelId(channelId);
   switch (getHeroesCount())
   {
   case 0:
-    sendMsg("What is your name?");
+    strm << "What is your name?";
     setState(Player::State::HeroName);
     break;
   case 1:
   {
     auto hero = getActiveHero();
-    sendMsg("You are " + hero.getName());
-    sendMsg("Type \"help\" if you need to learn how to play.");
-    sendMsg(world.describeRoom(hero));
+    strm << "You are " + hero.getName() << "\n";
+    strm << "Type \"help\" if you need to learn how to play.\n";
+    world.describeRoom(strm, hero);
     setState(Player::State::Playing);
     break;
   }
   default:
   {
     auto hero = getActiveHero();
-    sendMsg("// TODO handle more than one hero");
-    sendMsg("You are " + hero.getName());
-    sendMsg("Type \"help\" if you need to learn how to play.");
-    sendMsg(world.describeRoom(hero));
+    strm << "// TODO handle more than one hero\n";
+    strm << "You are " << hero.getName() << "\n";
+    strm << "Type \"help\" if you need to learn how to play.\n";
+    world.describeRoom(strm, hero);
     setState(Player::State::Playing);
     break;
   }
   }
 }
 
-void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::string &cmd)
+void Player::processCmd(std::ostream &strm, World &world, const std::string &cmd)
 {
   if (cmd == "quit" || cmd == "q")
   {
-    sendMsg("It was fun to play with you.");
+    strm << "It was fun to play with you.\n";
     setState(Player::State::Null);
     return;
   }
@@ -126,9 +125,9 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
     auto name = cmd;
     auto hero = getActiveHero();
     hero.setName(name);
-    sendMsg("Your name is " + name);
-    sendMsg("Type \"help\" if you need to learn how to play.");
-    sendMsg(world.describeRoom(hero));
+    strm << "Your name is " << name << "\n";
+    strm << "Type \"help\" if you need to learn how to play.\n";
+    world.describeRoom(strm, hero);
     setState(Player::State::Playing);
     return;
   }
@@ -138,12 +137,13 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
     auto room = world.getRoom(hero.getPos());
     if (cmd == "help" || cmd == "h")
     {
-      sendMsg(R"(# Help
+      strm << R"(# Help
 * _describe_ or _desc_ - describe place where hero is standing
 * _respawn_ or _rspwn_ - respawn in the origin on the world
 * _reload_ - reload map from git repository
 * _quit_ or _q_ - quit the game
 * _change name_ New Name or _chname_ New Name - change hero's name
+* _look at_ item - look at the item
 
 ## Walking
 * _north_ or _n_ - walk north
@@ -151,28 +151,27 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
 * _south_ or _s_ - walk south
 * _west_ or _w_ - walk west
 
-* _help_ or _h_ - this help)");
+* _help_ or _h_ - this help)";
     }
     else if (cmd == "reload")
-      world.reloadMap(sendMsg);
+      world.reloadMap(strm);
     else if (cmd == "respawn" || cmd == "rspwn")
     {
       hero.respawn();
-      sendMsg(world.describeRoom(hero));
+      world.describeRoom(strm, hero);
     }
     else if ([&]() {
-               for (int i = 0; i < static_cast<int>(Direction::Last); ++i)
+               for (auto d: Direction_META)
                {
-                 auto d = static_cast<Direction>(i);
                  if ((cmd == toShortString(d) || cmd == toString(d)))
                  {
                    if (!room || room->hasExit(d))
                    {
                      hero.walk(d);
-                     sendMsg(world.describeRoom(hero));
+                     world.describeRoom(strm, hero);
                    }
                    else
-                     sendMsg("You cannot walk this way...");
+                     strm << "You cannot walk this way...\n";
                    return true;
                  }
                }
@@ -181,7 +180,7 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
     {
     }
     else if (cmd == "desc" || cmd == "describe")
-      sendMsg(world.describeRoom(hero));
+      world.describeRoom(strm, hero);
     else if (cmd.find("change name ") == 0 || cmd.find("chname ") == 0)
     {
       const auto newName = [&cmd]() {
@@ -191,8 +190,13 @@ void Player::processCmd(const SendMsgCb &sendMsg, World &world, const std::strin
         return cmd.substr(strlen("chname "));
       }();
       hero.setName(newName);
-      sendMsg("Your new name is " + newName);
+      strm << "Your new name is " << newName << "\n";
     }
+    else if (world.processCmd(strm, hero, cmd))
+    {
+    }
+    else
+      strm << "Unknown command\n";
   }
   }
 }

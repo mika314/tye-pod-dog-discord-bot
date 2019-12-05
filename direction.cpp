@@ -1,4 +1,5 @@
 #include "direction.hpp"
+#include <algorithm>
 
 std::string toString(Direction value)
 {
@@ -9,15 +10,18 @@ std::string toString(Direction value)
   case Direction::South: return "south";
   case Direction::West: return "west";
   }
+  return "last";
 }
 
 std::string toShortString(Direction value)
 {
-  switch (value)
-  {
-  case Direction::North: return "n";
-  case Direction::East: return "e";
-  case Direction::South: return "s";
-  case Direction::West: return "w";
-  }
+  return toString(value).substr(0, 1);
+}
+
+Direction toDirection(const std::string &str)
+{
+  for (auto d : Direction_META)
+    if (toString(d) == str)
+      return d;
+  return Direction::Unknown;
 }
