@@ -22,7 +22,7 @@ void World::reloadMap(const SendMsgCb &sendMsg, const std::string &git, const st
   auto lVersion = redisCon->cmd<std::optional<std::string>>("HGET %s version", getId());
   if (!lGit)
   {
-    lGit = "https://github.com/mika314/mikas-world.git";
+    lGit = "https://github.com/mika314/test-world.git";
     lVersion = "master";
   }
   system(("git clone --depth 1 " + *lGit + " -b " + *lVersion + " world").c_str());
