@@ -33,25 +33,41 @@ Guild::Guild(const json &msg, RedisCon &redisCon)
   : systemChannelId(msg["system_channel_id"].get<std::string>()),
     lastChannelId(systemChannelId),
     rulesChannelId(systemChannelId),
+    announsChannelId(systemChannelId),
     redisCon(&redisCon),
-    world(redisCon, msg["id"].get<std::string>())
+    id(msg["id"].get<std::string>()),
+    world(redisCon, id)
 {
   for (const auto &ch : msg["channels"])
   {
     auto name = ch["name"].get<std::string>();
     std::transform(std::begin(name), std::end(name), std::begin(name), ::tolower);
     if (name.find("rules") != std::string::npos)
-    {
       rulesChannelId = ch["id"].get<std::string>();
-      break;
-    }
+    if (name.find("announcements") != std::string::npos)
+      announsChannelId = ch["id"].get<std::string>();
   }
+}
+
+static std::string trim(const std::string &str)
+{
+  size_t first = str.find_first_not_of(' ');
+  if (std::string::npos == first)
+  {
+    return str;
+  }
+  size_t last = str.find_last_not_of(' ');
+  return str.substr(first, (last - first + 1));
 }
 
 void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
   lastChannelId = msg["channel_id"].get<std::string>();
-  auto sendMsg = [this, &bot](const std::string &msg) { bot.message(lastChannelId, msg); };
+  auto sendMsg = [this, &bot](const std::string &msg) {
+    if (msg.empty())
+      return;
+    bot.message(lastChannelId, msg);
+  };
   Player player{
     *redisCon, msg["guild_id"].get<std::string>(), msg["author"]["id"].get<std::string>()};
   if (player.getChannelId() == lastChannelId)
@@ -95,6 +111,31 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       std::ostringstream strm;
       player.startTheGame(strm, world, lastChannelId);
       sendMsg(strm.str());
+    }
+    if (isMentioned(msg) && content.find("> list") == content.size() - strlen("> list"))
+    {
+      auto channels = getTwitchChannelsToMonitor();
+      if (channels.empty())
+        sendMsg("Nothing is monitored");
+      else
+      {
+        std::ostringstream strm;
+        for (const auto& ch: channels)
+          strm << ch << std::endl;
+        sendMsg(strm.str());
+      }
+    }
+    if (isMentioned(msg) && content.find("> monitor") != std::string::npos)
+    {
+      auto login = trim(content.substr(content.find("> monitor") + strlen("> monitor")));
+      redisCon->cmd<std::string>("SET twitch/%s/%s offline", id.c_str(), login.c_str());
+      sendMsg(login + " is monitored now");
+    }
+    if (isMentioned(msg) && content.find("> unmonitor") != std::string::npos)
+    {
+      auto login = trim(content.substr(content.find("> unmonitor") + strlen("> unmonitor")));
+      redisCon->cmd<int>("DEL twitch/%s/%s", id.c_str(), login.c_str());
+      sendMsg(login + " is unmonitored now");
     }
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
@@ -255,4 +296,61 @@ void Guild::onChannelCreate(Bot &, const json &msg)
   std::transform(std::begin(name), std::end(name), std::begin(name), ::tolower);
   if (name.find("rules") != std::string::npos)
     rulesChannelId = msg["id"].get<std::string>();
+}
+
+std::vector<std::string> Guild::getTwitchChannelsToMonitor() const
+{
+  std::vector<std::string> ret;
+  auto twitchNames = redisCon->cmd<std::vector<std::string>>("KEYS twitch/%s/*", id.c_str());
+  for (const auto &name : twitchNames)
+  {
+    std::istringstream strm(name);
+    std::string tmp;
+    std::getline(strm, tmp, '/');
+    assert(tmp == "twitch");
+    std::getline(strm, tmp, '/');
+    assert(tmp == id);
+    std::string login;
+    std::getline(strm, login, '/');
+    ret.emplace_back(login);
+  }
+  return ret;
+}
+
+void Guild::setLiveChannels(Bot &bot, const std::vector<std::string> &liveChannels)
+{
+  std::array streamMessages = {
+    "STRRRRRRREAMIIIIIIING",
+    "HEY it'z TIME <3",
+    "WE LIVE BOIS",
+    "WE LIVE MY DUDES :heart:",
+    "LIVE MY DUDEDS",
+    "WE STARTINGING!",
+    "STREAMIN LIKE A VILLAN",
+    "Stream is starting!",
+    "WE ARE LIVE",
+  };
+
+  auto channels = getTwitchChannelsToMonitor();
+  for (const auto &ch : channels)
+  {
+    auto oldIsLive = redisCon->cmd<std::string>("GET twitch/%s/%s", id.c_str(), ch.c_str());
+    auto isLive =
+      ((std::find(std::begin(liveChannels), std::end(liveChannels), ch) != std::end(liveChannels))
+         ? "online"
+         : "offline");
+    if (oldIsLive != isLive)
+    {
+      redisCon->cmd<std::string>("SET twitch/%s/%s %s", id.c_str(), ch.c_str(), isLive);
+      if (isLive == "online")
+      {
+        std::ostringstream content;
+        content << "@everyone " << streamMessages[rand() % streamMessages.size()]
+                << "\n"
+                   "https://www.twitch.tv/"
+                << ch;
+        bot.message(announsChannelId, content.str());
+      }
+    }
+  }
 }

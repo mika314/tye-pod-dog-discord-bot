@@ -1,6 +1,7 @@
 #include "bot.hpp"
 #include "guild.hpp"
 #include "redis_con.hpp"
+#include "twitch.hpp"
 #include <iostream>
 #include <unordered_map>
 
@@ -50,7 +51,7 @@ int main()
 {
   std::cout << "Starting bot...\n\n";
   srand(time(nullptr));
-
+  Twitch twitch;
   Bot bot;
   bot.reg(Handler::MessageCreate, [](Bot &bot, const json &msg) {
     try
@@ -109,6 +110,35 @@ int main()
     token = bot.invokeAt(get420Time(), invoke);
   };
   token = bot.invokeAt(get420Time(), invoke);
+
+  InvokeToken twitchToken;
+  std::function<void(Bot &)> twitchInvoke = [&twitchToken, &twitchInvoke, &twitch](Bot &bot) {
+    try
+    {
+      std::vector<std::string> channels;
+      for (auto &guild : guilds)
+      {
+        auto tmp = guild.second.getTwitchChannelsToMonitor();
+        channels.insert(std::end(channels), std::begin(tmp), std::end(tmp));
+      }
+
+      std::sort(std::begin(channels), std::end(channels));
+      channels.erase(std::unique(std::begin(channels), std::end(channels)), std::end(channels));
+
+      twitch.queryLiveChannels(channels, [&bot](const std::vector<std::string> &live) {
+        for (auto &guild : guilds)
+          guild.second.setLiveChannels(bot, live);
+      });
+    }
+    catch (std::runtime_error &e)
+    {
+      std::cerr << e.what() << std::endl;
+    }
+    using namespace std::literals::chrono_literals;
+    twitchToken = bot.invokeFromNow(1min, twitchInvoke);
+  };
+
+  twitchInvoke(bot);
 
   bot.run();
   return 0;

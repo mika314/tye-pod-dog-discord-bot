@@ -13,6 +13,8 @@ public:
   void onChannelCreate(Bot &, const nlohmann::json &msg);
   void onMemberRemove(Bot &, const nlohmann::json &msg);
   void onMessageCreate(Bot &, const nlohmann::json &msg);
+  std::vector<std::string> getTwitchChannelsToMonitor() const;
+  void setLiveChannels(Bot &, const std::vector<std::string> &);
 
 private:
   InvokeToken otherToken;
@@ -22,7 +24,9 @@ private:
   std::string systemChannelId;
   std::string lastChannelId;
   std::string rulesChannelId;
+  std::string announsChannelId;
 
   RedisCon *redisCon;
+  std::string id;
   World world;
 };
