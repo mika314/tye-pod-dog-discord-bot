@@ -6,7 +6,7 @@ namespace Internal
   template <>
   std::string get<std::string>(redisReply *reply)
   {
-    if (reply->type != REDIS_REPLY_STRING)
+    if (reply->type != REDIS_REPLY_STRING && reply->type != REDIS_REPLY_STATUS)
     {
       std::cerr << "Unexpected redis reply: " << reply->type << std::endl;
       throw RedisUnexpectedReplyError{};
@@ -22,7 +22,8 @@ namespace Internal
     default:
       std::cerr << "Unexpected redis reply: " << reply->type << std::endl;
       throw RedisUnexpectedReplyError{};
-    case REDIS_REPLY_STRING: return std::string{reply->str, reply->str + reply->len};
+    case REDIS_REPLY_STRING:
+    case REDIS_REPLY_STATUS: return std::string{reply->str, reply->str + reply->len};
     case REDIS_REPLY_NIL: return std::nullopt;
     }
   }

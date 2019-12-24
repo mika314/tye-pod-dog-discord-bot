@@ -21,6 +21,8 @@ set(SOURCE_FILES
         read_token.cpp
         redis_con.cpp
         room.cpp
+        twitch.cpp
+        twitch.hpp
         world.cpp
 )
 
@@ -52,6 +54,7 @@ TARGET_LINK_LIBRARIES(
         ssl
         hiredis
         uuid
+        curl
 )
 
 set(CMAKE_BUILD_TYPE Debug)

@@ -23,7 +23,7 @@ void World::reloadMap(std::ostream &strm, const std::string &git, const std::str
   if (!lGit)
   {
     lGit = "https://github.com/mika314/mikas-world.git";
-    lVersion = "master";
+    lVersion = "dev";
   }
   system(("git clone --depth 1 " + *lGit + " -b " + *lVersion + " world").c_str());
   std::unordered_map<Pos, Room, PosHash> lMap;
