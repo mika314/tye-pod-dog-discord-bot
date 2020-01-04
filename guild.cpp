@@ -277,7 +277,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return;
     }
   }
-  if (rand() % 10 == 0)
+  if (rand() % 20 == 0)
   {
     otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
       std::array words = {
