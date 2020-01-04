@@ -21,12 +21,14 @@ private:
   InvokeToken token8ball;
   InvokeToken welcomeToken;
 
+  RedisCon *redisCon;
+
+  std::string id;
+
   std::string systemChannelId;
   std::string lastChannelId;
   std::string rulesChannelId;
   std::string announsChannelId;
 
-  RedisCon *redisCon;
-  std::string id;
   World world;
 };

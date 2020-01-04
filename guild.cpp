@@ -29,13 +29,28 @@ namespace
   }
 } // namespace
 
+static std::string getLastChannelId(RedisCon &redisCon,
+                                    const std::string &id,
+                                    const std::string &systemChannelId)
+{
+  try
+  {
+    return redisCon.cmd<std::string>("GET guild/%s/lastChannelId", id.c_str());
+  }
+  catch (...)
+  {
+    redisCon.cmd<std::string>("SET guild/%s/lastChannelId %s", id.c_str(), systemChannelId.c_str());
+    return systemChannelId;
+  }
+}
+
 Guild::Guild(const json &msg, RedisCon &redisCon)
-  : systemChannelId(msg["system_channel_id"].get<std::string>()),
-    lastChannelId(systemChannelId),
+  : redisCon(&redisCon),
+    id(msg["id"].get<std::string>()),
+    systemChannelId(msg["system_channel_id"].get<std::string>()),
+    lastChannelId(getLastChannelId(redisCon, id, systemChannelId)),
     rulesChannelId(systemChannelId),
     announsChannelId(systemChannelId),
-    redisCon(&redisCon),
-    id(msg["id"].get<std::string>()),
     world(redisCon, id)
 {
   for (const auto &ch : msg["channels"])
@@ -62,7 +77,9 @@ static std::string trim(const std::string &str)
 
 void Guild::onMessageCreate(Bot &bot, const json &msg)
 {
+  // std::cout << msg.dump() << std::endl;
   lastChannelId = msg["channel_id"].get<std::string>();
+  redisCon->cmd<std::string>("SET guild/%s/lastChannelId %s", id.c_str(), lastChannelId.c_str());
   auto sendMsg = [this, &bot](const std::string &msg) {
     if (msg.empty())
       return;
@@ -260,7 +277,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return;
     }
   }
-  if (rand() % 10 == 0)
+  if (rand() % 20 == 0)
   {
     otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
       std::array words = {
