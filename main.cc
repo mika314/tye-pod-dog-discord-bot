@@ -17,7 +17,8 @@ namespace
     gmtime_r(&now, &tm);
     tm.tm_sec = 30;
     tm.tm_min = 20;
-    tm.tm_hour = 0; // 4pm Pasific Time
+    tm.tm_hour = 16 - 16; // 4pm Pasific Time
+
     auto newTime = timegm(&tm);
     while (newTime <= now)
       newTime += 24 * 60 * 60;
