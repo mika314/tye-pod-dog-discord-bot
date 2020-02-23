@@ -2,6 +2,7 @@
 #include "guild.hpp"
 #include "redis_con.hpp"
 #include "twitch.hpp"
+#include <algorithm>
 #include <iostream>
 #include <unordered_map>
 
@@ -27,24 +28,17 @@ namespace
 
   std::unordered_map<std::string, Guild> guilds;
   RedisCon redisCon;
-  enum class GuildNotFoundError;
 
-  Guild &getGuild(const json &msg)
+  Guild *getGuild(const json &msg)
   {
     auto jsIt = msg.find("guild_id");
     if (jsIt == std::end(msg))
-    {
-      std::cerr << "guild_id is not specified in the message\n";
-      throw GuildNotFoundError{};
-    }
+      return nullptr;
     std::string guildId = jsIt->get<std::string>();
     auto it = guilds.find(guildId);
     if (it == std::end(guilds))
-    {
-      std::cerr << "Guild " << guildId << " is not found\n";
-      throw GuildNotFoundError{};
-    }
-    return it->second;
+      return nullptr;
+    return &it->second;
   }
 } // namespace
 
@@ -55,28 +49,42 @@ int main()
   Twitch twitch;
   Bot bot;
   bot.reg(Handler::MessageCreate, [](Bot &bot, const json &msg) {
-    try
-    {
-      // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
-      getGuild(msg).onMessageCreate(bot, msg);
-    }
-    catch (GuildNotFoundError)
+    // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
+    if (auto guild = getGuild(msg))
+      guild->onMessageCreate(bot, msg);
+    else
     {
       if (msg["author"]["id"] == bot.self()["id"])
         return;
-      bot.message(msg["channel_id"].get<std::string>(), "You want to have fun alone?");
+      // std::cout << "MESSAGE_CREATE: " << msg.dump(4) << std::endl;
+      auto author = msg["author"]["username"].get<std::string>();
+      std::transform(std::begin(author), std::end(author), std::begin(author), ::tolower);
+      if (author.find("mohjii") != std::string::npos)
+      {
+        auto it = std::find_if(std::begin(guilds),
+                               std::end(guilds),
+                               [](const std::pair<const std::string, Guild> &value) {
+                                 auto guildName = value.second.getName();
+                                 std::transform(std::begin(guildName),
+                                                std::end(guildName),
+                                                std::begin(guildName),
+                                                ::tolower);
+                                 return guildName.find("shit artists do") != std::string::npos;
+                               });
+        if (it != std::end(guilds))
+          it->second.messageOnLastChannel(bot, msg["content"].get<std::string>());
+        else
+          std::cout << "guild \"shit artists do\" not found\n";
+      }
+      else
+        bot.message(msg["channel_id"].get<std::string>(), "You want to have fun alone?");
     }
   });
 
   bot.reg(Handler::GuildMemberRemove, [](Bot &bot, const json &msg) {
-    try
-    {
-      // std::cout << "GUILD_MEMBER_REMOVE: " << msg.dump(4) << std::endl;
-      getGuild(msg).onMemberRemove(bot, msg);
-    }
-    catch (GuildNotFoundError)
-    {
-    }
+    // std::cout << "GUILD_MEMBER_REMOVE: " << msg.dump(4) << std::endl;
+    if (auto guild = getGuild(msg))
+      guild->onMemberRemove(bot, msg);
   });
 
   bot.reg(Handler::GuildMemberAdd, [](Bot &bot, const json &msg) {
@@ -85,7 +93,6 @@ int main()
 
   bot.reg(Handler::GuildCreate, [](Bot &bot, const json &msg) {
     // std::cout << "GUILD_CREATE: " << msg.dump(4) << std::endl;
-    std::cout << "Guild: " << msg["name"].get<std::string>() << std::endl;
     guilds.emplace(msg["id"].get<std::string>(), Guild{msg, redisCon});
   });
 
@@ -94,14 +101,9 @@ int main()
   bot.reg(Handler::TypingStart, [](Bot &bot, const json &msg) {});
 
   bot.reg(Handler::ChannelCreate, [](Bot &bot, const json &msg) {
-    try
-    {
-      // std::cout << "CHANNEL_CREATE: " << msg.dump(4) << std::endl;
-      getGuild(msg).onChannelCreate(bot, msg);
-    }
-    catch (GuildNotFoundError)
-    {
-    }
+    // std::cout << "CHANNEL_CREATE: " << msg.dump(4) << std::endl;
+    if (auto guild = getGuild(msg))
+      guild->onChannelCreate(bot, msg);
   });
 
   InvokeToken token;

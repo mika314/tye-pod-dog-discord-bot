@@ -47,12 +47,14 @@ static std::string getLastChannelId(RedisCon &redisCon,
 Guild::Guild(const json &msg, RedisCon &redisCon)
   : redisCon(&redisCon),
     id(msg["id"].get<std::string>()),
+    name(msg["name"].get<std::string>()),
     systemChannelId(msg["system_channel_id"].get<std::string>()),
     lastChannelId(getLastChannelId(redisCon, id, systemChannelId)),
     rulesChannelId(systemChannelId),
     announsChannelId(systemChannelId),
     world(redisCon, id)
 {
+  std::cout << "Guild: " << name << std::endl;
   for (const auto &ch : msg["channels"])
   {
     auto name = ch["name"].get<std::string>();
@@ -137,7 +139,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       else
       {
         std::ostringstream strm;
-        for (const auto& ch: channels)
+        for (const auto &ch : channels)
           strm << ch << std::endl;
         sendMsg(strm.str());
       }
@@ -281,13 +283,95 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
   {
     otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
       std::array words = {
-        "420",          "<33",     "AAAAAAH",   "AWWWW",     "BOI",          "BOIOOO",
-        "BOIU",         "Booooii", "Dab",       "HNNNNNNNG", "HNNNNNNNNNNG", "HNNNNNNNNNNNNNNNG",
-        "Jdjdjjdjsiud", "LMAO",    "LOL",       "LOLL",      "LOLOL",        "Lololol",
-        "REEEEEEE",     "Uhoh",    "YAAAAAAS",  "YAS",       "YE",           "YEEES CUTE",
-        "YIS",          "YUP",     "delicious", "hnnng",     "hohHHHH",      "imcryingggg",
-        "lol",          "nOH",     "omg",       "wooot",     "yAAAAAS",      "yaaaay",
-        "yay",          "ye",      "yeet",
+        "69699t9t9t9t",
+        "<33",
+        ">:C",
+        "AAAAAAH",
+        "AWW",
+        "AWWWW",
+        "AYISSSS",
+        "BOI",
+        "BOIOOO",
+        "BOIU",
+        "Booooii",
+        "CUTE",
+        "Cry",
+        "DAAAAAAAAAAAAAAAAAAAAAAAAAAAW",
+        "DBDJKEJEUIWJDH",
+        "Dab",
+        "HNNNNNNNG",
+        "HNNNNNNNNNNG",
+        "HNNNNNNNNNNNNNNNG",
+        "Itsk",
+        "Jdjdjjdjsiud",
+        "LMAO",
+        "LMAO",
+        "LOL OK",
+        "LOL YES",
+        "LOL",
+        "LOL",
+        "LOL",
+        "LOL",
+        "LOL",
+        "LOL",
+        "LOL",
+        "LOLL",
+        "LOLOL",
+        "LOLOL",
+        "LOLOL",
+        "LOOOOOOOOOOOOOOOOOOOOOOOOOOOOl",
+        "LollololLOLOL",
+        "Lololol",
+        "M SCREEEEREEEEN",
+        "NOH",
+        "OH",
+        "OMGGG",
+        "Omg",
+        "REEEEEEE",
+        "SCREEEEEEEEEEEEM AH",
+        "SCREEM THE CUTE",
+        "SCREEM",
+        "SCREEM",
+        "SCREEM",
+        "SCREEM",
+        "SCREEMING",
+        "SCREEMM",
+        "SO CUUUUUUUTE",
+        "SSSSS",
+        "THICC",
+        "Uhoh",
+        "YAAAAAAS",
+        "YAAAAAS",
+        "YAS",
+        "YE",
+        "YEEEEEE",
+        "YEEEEEEE",
+        "YEEES CUTE",
+        "YIIIIIS",
+        "YIS",
+        "YUH",
+        "YUH",
+        "YUP",
+        "Ye",
+        "delicious",
+        "hnnng",
+        "hohHHHH",
+        "imcryingggg",
+        "lol",
+        "lol",
+        "nOH",
+        "omg",
+        "sCREEE<M",
+        "sCREEEEEEEEEEEEEEEEEEEEEM",
+        "sCREEM",
+        "wooot",
+        "yAAAAAS",
+        "yEEEEEEEEEEEEEEEEEEEE",
+        "yaaaay",
+        "yay",
+        "ye",
+        "ye",
+        "yeet",
       };
       sendMsg(words[rand() % words.size()]);
     });
@@ -370,4 +454,9 @@ void Guild::setLiveChannels(Bot &bot, const std::vector<std::string> &liveChanne
       }
     }
   }
+}
+
+std::string Guild::getName() const
+{
+  return name;
 }
