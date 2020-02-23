@@ -15,6 +15,7 @@ public:
   void onMessageCreate(Bot &, const nlohmann::json &msg);
   std::vector<std::string> getTwitchChannelsToMonitor() const;
   void setLiveChannels(Bot &, const std::vector<std::string> &);
+  std::string getName() const;
 
 private:
   InvokeToken otherToken;
@@ -24,6 +25,7 @@ private:
   RedisCon *redisCon;
 
   std::string id;
+  std::string name;
 
   std::string systemChannelId;
   std::string lastChannelId;
