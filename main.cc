@@ -15,12 +15,12 @@ namespace
   {
     auto now = system_clock::to_time_t(system_clock::now());
     std::tm tm;
-    gmtime_r(&now, &tm);
+    localtime_r(&now, &tm);
     tm.tm_sec = 30;
     tm.tm_min = 20;
-    tm.tm_hour = 16 - 16; // 4pm Pasific Time
+    tm.tm_hour = 16;
 
-    auto newTime = timegm(&tm);
+    auto newTime = mktime(&tm);
     while (newTime <= now)
       newTime += 24 * 60 * 60;
     return system_clock::from_time_t(newTime);
