@@ -2,6 +2,7 @@
 #include "bot.hpp"
 #include "redis_con.hpp"
 #include "world.hpp"
+#include "gpt3_bot.hpp"
 #include <string>
 
 class Guild
@@ -33,4 +34,5 @@ private:
   std::string announsChannelId;
 
   World world;
+  Gpt3Bot gpt3Bot;
 };
