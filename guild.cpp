@@ -372,6 +372,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
         "ye",
         "ye",
         "yeet",
+        "Life alert and squirt",
       };
       sendMsg(words[rand() % words.size()]);
     });
