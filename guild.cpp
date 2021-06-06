@@ -152,9 +152,16 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     auto content = msg["content"].get<std::string>();
     for (const json &mention : msg["mentions"])
     {
-      auto str2 = "<@!" + mention["id"].get<std::string>() + ">";
-      for (auto p = content.find(str2); p != std::string::npos; p = content.find(str2))
-        content.replace(p, str2.size(), mention["username"].get<std::string>());
+      {
+        auto str2 = "<@!" + mention["id"].get<std::string>() + ">";
+        for (auto p = content.find(str2); p != std::string::npos; p = content.find(str2))
+          content.replace(p, str2.size(), mention["username"].get<std::string>());
+      }
+      {
+        auto str2 = "<@" + mention["id"].get<std::string>() + ">";
+        for (auto p = content.find(str2); p != std::string::npos; p = content.find(str2))
+          content.replace(p, str2.size(), mention["username"].get<std::string>());
+      }
     }
     std::ostringstream ss;
     ss << msg["author"]["username"].get<std::string>() << ": " << content;
