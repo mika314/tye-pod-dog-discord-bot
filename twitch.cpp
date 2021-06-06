@@ -1,16 +1,11 @@
 #include "twitch.hpp"
+#include "curl_glob_init.hpp"
 #include <iostream>
 #include <nlohmann/json.hpp>
 
 Twitch::Twitch()
 {
-  if (curl_global_init(CURL_GLOBAL_ALL))
-    throw std::runtime_error("Unable to curl_global_init");
-}
-
-Twitch::~Twitch()
-{
-  curl_global_cleanup();
+  curlGlobInit();
 }
 
 static size_t curlWrite(void *buffer, size_t size, size_t nmemb, void *userp)
@@ -101,4 +96,3 @@ void Twitch::queryLiveChannels(const std::vector<std::string> &channels,
   }
   cb(ret);
 }
-

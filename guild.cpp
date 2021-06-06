@@ -87,6 +87,80 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return;
     bot.message(lastChannelId, msg);
   };
+  {
+    /*
+      {
+        "attachments" : [
+
+        ],
+        "author" : {
+          "avatar" : "3048c354e5cbc1bb94da0339e8540935",
+          "discriminator" : "1415",
+          "id" : "466816161309523969",
+          "public_flags" : 0,
+          "username" : "Mika3"
+        },
+        "channel_id" : "641721960052555776",
+        "components" : [
+
+        ],
+        "content" : "test <@!640973029366693920> ?",
+        "edited_timestamp" : null,
+        "embeds" : [
+
+        ],
+        "flags" : 0,
+        "guild_id" : "640993083399471134",
+        "id" : "851204404862124062",
+        "member" : {
+          "deaf" : false,
+          "hoisted_role" : null,
+          "joined_at" : "2019-11-04T19:17:40.161000+00:00",
+          "mute" : false,
+          "roles" : [
+
+          ]
+        },
+        "mention_everyone" : false,
+        "mention_roles" : [
+
+        ],
+        "mentions" : [ {
+          "avatar" : null,
+          "bot" : true,
+          "discriminator" : "7540",
+          "id" : "640973029366693920",
+          "member" : {
+            "deaf" : false,
+            "hoisted_role" : null,
+            "joined_at" : "2019-11-04T19:20:43.226000+00:00",
+            "mute" : false,
+            "roles" : ["640993851276001340"]
+          },
+          "public_flags" : 0,
+          "username" : "tye-pod-dog-dev"
+        } ],
+        "nonce" : "851204393612083200",
+        "pinned" : false,
+        "referenced_message" : null,
+        "timestamp" : "2021-06-06T21:02:24.732000+00:00",
+        "tts" : false,
+        "type" : 0
+      }
+    */
+
+    auto content = msg["content"].get<std::string>();
+    for (const json &mention : msg["mentions"])
+    {
+      auto str2 = "<@!" + mention["id"].get<std::string>() + ">";
+      for (auto p = content.find(str2); p != std::string::npos; p = content.find(str2))
+        content.replace(p, str2.size(), mention["username"].get<std::string>());
+    }
+    std::ostringstream ss;
+    ss << msg["author"]["username"].get<std::string>() << ": " << content;
+    std::cout << ss.str() << std::endl;
+    gpt3Bot.addMsg(lastChannelId, ss.str());
+  }
   Player player{
     *redisCon, msg["guild_id"].get<std::string>(), msg["author"]["id"].get<std::string>()};
   if (player.getChannelId() == lastChannelId)
@@ -158,115 +232,7 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
     }
     if (isMentioned(msg) && content.find("?") != std::string::npos)
     {
-      token8ball = bot.invokeFromNow(2s, [sendMsg](Bot &bot) {
-        std::array eightBallAnswers = {
-          "It is certain.",
-          "It is decidedly so.",
-          "Without a doubt.",
-          "Yes - definitely.",
-          "You may rely on it.",
-          "As I see it, yes.",
-          "Most likely.",
-          "Outlook good.",
-          "Yes.",
-          "Signs point to yes.",
-          "Reply hazy, try again.",
-          "Ask again later.",
-          "Better not tell you now.",
-          "Cannot predict now.",
-          "Concentrate and ask again.",
-          "Don't count on it.",
-          "My reply is no.",
-          "My sources say no.",
-          "Outlook not so good.",
-          "Very doubtful.",
-
-          "IT IS CERTAIN!!",
-          "IT IS DECIDEDLY SO!!!",
-          "WITHOUT A DOUBT!",
-          "YES - DEFINITELY",
-          "YOU MAY RELY ON IT...",
-          "AS I SEE IT, YAS.....",
-          "MOST LIKELY",
-          "OUTLOOK GOOD",
-          "YIS.",
-          "SIGNS POINT TO YAS...",
-          "REPLY HAZY, TRY AGAIN!!",
-          "ASK AGAIN LATER!!!",
-          "BETTER NOT TELL YOU NOW",
-          "CANNOT PREDICT NOW",
-          "CONCENTRATE AND ASK AGAIN",
-          "DONT COUNT ON IT",
-          "MY REPLY IS NO",
-          "MY SOURCES SAY NO",
-          "OUTLOOK NOT SO GOOD!",
-          "VERY DOUBTFUL...",
-
-          "it is certain...",
-          "it is decidedly so...",
-          "without a doubt",
-          "yIs - definitely",
-          "you may rely on it",
-          "as i see it, yes",
-          "most likely",
-          "outlook good",
-          "yaaassss...",
-          "signs point to yes",
-          "reply hazy, try again",
-          "ask again later...",
-          "better not tell you now.....",
-          "cannot predict now",
-          "concentrate and ask again",
-          "don't count on it",
-          "my reply is nu.",
-          "my sources say nu.",
-          "outlook not so good",
-          "very doubtful.",
-
-          "itiscertain...",
-          "itisdecidedly so...",
-          "without-a-doubt",
-          "yIs-definitely",
-          "you may rely on it",
-          "asiseeit, yes",
-          "mostlikely",
-          "outlookgood",
-          "yes",
-          "signspointtoyes",
-          "replyhazytryagain",
-          "askagainlater...",
-          "betternottellyou now.....",
-          "cannotpredictnow",
-          "concentrateandaskagain",
-          "dontcountonit",
-          "myreplyisnu.",
-          "mysourcessaynu",
-          "outlooknotsogood",
-          "verydoubtful",
-
-          "ITISCERTAIN...",
-          "ITISDECIDEDLY SO...",
-          "WITHOUT-A-DOUBT",
-          "YIS-DEFINITELY",
-          "YOU MAY RELY ON IT",
-          "ASISEEIT, YIS",
-          "MOSTLIKELY",
-          "OUTLOOKGOOD",
-          "YAAAsS",
-          "SIGNSpOINTtOyES",
-          "REPLYhAZYtRYaGAIN",
-          "ASKaGAINlATER...",
-          "BETTERNOTTELLYOU NOW.....",
-          "CANNOTPREDICTNOW",
-          "CONCENTRATEANDASKAGAIN",
-          "DONTCOUNTONIT",
-          "MYREPLYISNuuuU.",
-          "MYSOURCESSAYNUuu",
-          "OUTLOOKNOTSOGOOD",
-          "VERYDOUBTFUL",
-        };
-        sendMsg(eightBallAnswers[rand() % eightBallAnswers.size()]);
-      });
+      sendMsg(gpt3Bot.getMsg(lastChannelId));
       return;
     }
   }
@@ -279,103 +245,10 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       return;
     }
   }
-  if (rand() % 20 == 0)
+  if (rand() % 10 == 0)
   {
-    otherToken = bot.invokeFromNow(10s, [sendMsg](Bot &bot) {
-      std::array words = {
-        "69699t9t9t9t",
-        "<33",
-        ">:C",
-        "AAAAAAH",
-        "AWW",
-        "AWWWW",
-        "AYISSSS",
-        "BOI",
-        "BOIOOO",
-        "BOIU",
-        "Booooii",
-        "CUTE",
-        "Cry",
-        "DAAAAAAAAAAAAAAAAAAAAAAAAAAAW",
-        "DBDJKEJEUIWJDH",
-        "Dab",
-        "HNNNNNNNG",
-        "HNNNNNNNNNNG",
-        "HNNNNNNNNNNNNNNNG",
-        "Itsk",
-        "Jdjdjjdjsiud",
-        "LMAO",
-        "LMAO",
-        "LOL OK",
-        "LOL YES",
-        "LOL",
-        "LOL",
-        "LOL",
-        "LOL",
-        "LOL",
-        "LOL",
-        "LOL",
-        "LOLL",
-        "LOLOL",
-        "LOLOL",
-        "LOLOL",
-        "LOOOOOOOOOOOOOOOOOOOOOOOOOOOOl",
-        "LollololLOLOL",
-        "Lololol",
-        "M SCREEEEREEEEN",
-        "NOH",
-        "OH",
-        "OMGGG",
-        "Omg",
-        "REEEEEEE",
-        "SCREEEEEEEEEEEEM AH",
-        "SCREEM THE CUTE",
-        "SCREEM",
-        "SCREEM",
-        "SCREEM",
-        "SCREEM",
-        "SCREEMING",
-        "SCREEMM",
-        "SO CUUUUUUUTE",
-        "SSSSS",
-        "THICC",
-        "Uhoh",
-        "YAAAAAAS",
-        "YAAAAAS",
-        "YAS",
-        "YE",
-        "YEEEEEE",
-        "YEEEEEEE",
-        "YEEES CUTE",
-        "YIIIIIS",
-        "YIS",
-        "YUH",
-        "YUH",
-        "YUP",
-        "Ye",
-        "delicious",
-        "hnnng",
-        "hohHHHH",
-        "imcryingggg",
-        "lol",
-        "lol",
-        "nOH",
-        "omg",
-        "sCREEE<M",
-        "sCREEEEEEEEEEEEEEEEEEEEEM",
-        "sCREEM",
-        "wooot",
-        "yAAAAAS",
-        "yEEEEEEEEEEEEEEEEEEEE",
-        "yaaaay",
-        "yay",
-        "ye",
-        "ye",
-        "yeet",
-        "Life alert and squirt",
-      };
-      sendMsg(words[rand() % words.size()]);
-    });
+    otherToken = bot.invokeFromNow(
+      10s, [sendMsg, msg = gpt3Bot.getMsg(lastChannelId)](Bot &bot) { sendMsg(msg); });
     return;
   }
 }

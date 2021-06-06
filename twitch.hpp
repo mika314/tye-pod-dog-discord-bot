@@ -8,7 +8,6 @@ class Twitch
 {
 public:
   Twitch();
-  ~Twitch();
   void queryLiveChannels(const std::vector<std::string> &channels,
                          std::function<void(const std::vector<std::string> &)> &&);
 };
