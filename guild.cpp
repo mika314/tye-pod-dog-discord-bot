@@ -230,9 +230,10 @@ void Guild::onMessageCreate(Bot &bot, const json &msg)
       redisCon->cmd<int>("DEL twitch/%s/%s", id.c_str(), login.c_str());
       sendMsg(login + " is unmonitored now");
     }
-    if (isMentioned(msg) && content.find("?") != std::string::npos)
+    if (isMentioned(msg))
     {
-      sendMsg(gpt3Bot.getMsg(lastChannelId));
+      otherToken = bot.invokeFromNow(
+        2s, [sendMsg, msg = gpt3Bot.getMsg(lastChannelId)](Bot &bot) { sendMsg(msg); });
       return;
     }
   }
