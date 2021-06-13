@@ -93,7 +93,7 @@ Tye-Pod Dog: FUCKIN LOVE IT
   curl_easy_setopt(handle, CURLOPT_READDATA, &jsonStrm);
 
   std::string url;
-  curl_easy_setopt(handle, CURLOPT_URL, "https://api.openai.com/v1/engines/ada/completions");
+  curl_easy_setopt(handle, CURLOPT_URL, "https://api.openai.com/v1/engines/davinci/completions");
 
   const auto tkn = "Authorization: Bearer " + token;
   struct curl_slist *chunk = NULL;
